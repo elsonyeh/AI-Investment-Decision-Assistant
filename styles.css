@@ -1028,13 +1028,14 @@ body {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
+    align-items: stretch;
 }
 
 .api-key-input {
     flex: 1;
     padding: 12px 15px;
     border: 2px solid #e0e0e0;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 1em;
     font-family: 'Courier New', monospace;
     transition: all 0.3s ease;
@@ -1046,36 +1047,19 @@ body {
     box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.1);
 }
 
-.btn-secondary {
-    padding: 12px 20px;
-    background: #757575;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.btn-secondary:hover {
-    background: #616161;
-    transform: translateY(-2px);
+.api-key-input-group .btn {
+    flex-shrink: 0;
 }
 
 .btn-danger {
-    padding: 12px 20px;
-    background: #f44336;
+    background: linear-gradient(135deg, #f44336, #d32f2f);
     color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
 }
 
 .btn-danger:hover {
-    background: #d32f2f;
     transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
 }
 
 .setting-actions {
