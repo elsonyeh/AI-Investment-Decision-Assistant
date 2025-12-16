@@ -1,223 +1,344 @@
-# AI投資決策小幫手 🤖📈
+<div align="center">
 
-基於 Multi-Agent 架構的智能投資分析系統，使用 ChatGPT API 提供專業的股票投資分析建議。
+# 🤖 AI投資決策小幫手
+
+**基於 Multi-Agent 架構的智能投資分析系統**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![OpenAI](https://img.shields.io/badge/Powered%20by-OpenAI-412991.svg)](https://openai.com/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?logo=javascript&logoColor=black)](https://www.javascript.com/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+
+使用 ChatGPT API 提供專業的股票投資分析建議
+
+[功能特色](#-功能特色) • [快速開始](#-快速開始) • [使用方法](#-使用方法) • [費用說明](#-費用說明) • [文檔](#-文檔)
+
+</div>
+
+---
+
+## 📸 專案展示
+
+> **提示：** 您可以在此添加應用截圖，展示系統介面和功能
+
+```
+建議添加以下截圖：
+1. 主介面（配置區）
+2. 分析進度畫面
+3. 投資決策摘要
+4. 詳細分析報告
+```
 
 ## 🌟 功能特色
 
-### 📊 Multi-Agent 投資分析團隊
+### 📊 Multi-Agent 投資分析架構
 
-本系統模擬專業投資團隊，包含以下智能代理：
+本系統採用先進的多智能體架構，模擬真實投資團隊的決策流程：
 
-#### 1️⃣ 分析師團隊
-- **📈 技術分析師** - 分析技術指標、價格趨勢、支撐壓力位
-- **💼 基本面分析師** - 評估財務狀況、成長性、估值水平
-- **📰 新聞分析師** - 追蹤重大新聞、政策影響、產業趨勢
-- **💬 情緒分析師** - 分析社群情緒、投資者動向、市場恐慌/貪婪程度
+<table>
+<tr>
+<td width="50%">
 
-#### 2️⃣ 研究團隊（多空辯論）
-- **🐂 多頭 Agent** - 提出看多論點和上漲理由
-- **🐻 空頭 Agent** - 提出看空論點和風險警示
+#### 🎯 分析師團隊
+- 📈 **技術分析師** - 技術指標、趨勢判斷
+- 💼 **基本面分析師** - 財務評估、估值分析
+- 📰 **新聞分析師** - 事件追蹤、政策影響
+- 💬 **情緒分析師** - 社群情緒、市場動向
 
-#### 3️⃣ 風險管理團隊
-- 評估投資風險等級
-- 提供風險控制建議
-- 建議倉位配置策略（激進/中性/保守）
+</td>
+<td width="50%">
 
-#### 4️⃣ 投資組合經理
-- 整合所有分析結果
-- 做出最終投資決策
-- 提供目標價位和置信度評估
+#### 🔄 決策流程
+- 🐂🐻 **多空辯論** - 雙方論證、風險平衡
+- ⚠️ **風險管理** - 等級評估、倉位建議
+- 🎯 **組合經理** - 最終決策、目標價位
 
-### 🌍 支持市場
-- **美股** (US) - 如 AAPL、TSLA、MSFT
-- **台股** (TW) - 如 2330、2317、2454
-- **港股** (HK) - 如 00700、09988
+</td>
+</tr>
+</table>
 
-### ⚙️ 分析深度可調
-- **1級** - 快速分析（適合快速查看）
-- **3級** - 標準分析（推薦，平衡速度與深度）
-- **5級** - 全面分析（最詳細，耗時較長）
+### 🌍 多市場支援
+| 市場 | 代碼示例 | 說明 |
+|------|---------|------|
+| 🇺🇸 美股 | `AAPL`, `TSLA`, `MSFT` | 納斯達克、紐約證交所 |
+| 🇹🇼 台股 | `2330`, `2317`, `2454` | 台灣證券交易所 |
+| 🇭🇰 港股 | `00700`, `09988` | 香港交易所 |
 
-## 📦 安裝與設置
+### ⚙️ 靈活配置
+- 🎚️ **5級分析深度** - 從快速瀏覽到深度研究
+- 🎯 **自選分析師** - 根據需求選擇分析維度
+- 📅 **歷史分析** - 回溯任意日期的市場狀況
 
-### 1. 下載文件
+---
 
-確保您的項目資料夾包含以下文件：
+## 🚀 快速開始
+
+### 📋 前置需求
+
+- 現代化瀏覽器（Chrome、Firefox、Safari、Edge）
+- OpenAI API Key（[點此獲取](https://platform.openai.com/api-keys)）
+- （可選）本地 Web 伺服器（Python、Node.js 等）
+
+### ⚡ 三步驟啟動
+
+#### 1️⃣ 克隆專案
+
+```bash
+git clone https://github.com/elsonyeh/AI-Investment-Decision-Assistant.git
+cd AI-Investment-Decision-Assistant
 ```
-AI投資決策小幫手/
-├── index.html      # 主頁面
-├── styles.css      # 樣式文件
-├── script.js       # JavaScript 邏輯
-├── config.js       # API 配置
-└── README.md       # 說明文件
+
+#### 2️⃣ 配置 API Key
+
+```bash
+# 複製配置範例
+cp config.example.js config.js
+
+# 編輯 config.js，填入您的 API Key
+# OPENAI_API_KEY: 'sk-proj-xxxxxxxxxx',
 ```
 
-### 2. 設置 OpenAI API Key
+#### 3️⃣ 啟動應用
 
-#### 步驟：
-1. 前往 [OpenAI API Keys 頁面](https://platform.openai.com/api-keys)
-2. 登入您的 OpenAI 帳號（如果沒有，請先註冊）
-3. 點擊 **"Create new secret key"** 創建新的 API Key
-4. 複製生成的 API Key（格式如：`sk-proj-xxxxxxxxxx`）
-5. 打開 `config.js` 文件
-6. 找到這一行：
-   ```javascript
-   OPENAI_API_KEY: 'your-api-key-here',
-   ```
-7. 將 `'your-api-key-here'` 替換為您的實際 API Key：
-   ```javascript
-   OPENAI_API_KEY: 'sk-proj-xxxxxxxxxx',
-   ```
-8. 保存文件
+**方法 A：直接開啟**
+```bash
+# Windows
+start index.html
 
-### 3. 運行應用
+# macOS
+open index.html
 
-1. 使用瀏覽器打開 `index.html` 文件
-2. 或使用本地伺服器（推薦）：
-   ```bash
-   # 如果安裝了 Python
-   python -m http.server 8000
+# Linux
+xdg-open index.html
+```
 
-   # 或使用 Node.js 的 http-server
-   npx http-server
-   ```
-3. 在瀏覽器中訪問 `http://localhost:8000`
+**方法 B：使用本地伺服器（推薦）**
+```bash
+# Python 3
+python -m http.server 8000
 
-## 🚀 使用方法
+# Node.js
+npx http-server
 
-### 步驟 1: 配置分析參數
+# 然後訪問 http://localhost:8000
+```
 
-1. **選擇市場**：選擇美股、台股或港股
-2. **輸入股票代碼**：
-   - 美股示例：`AAPL`（蘋果）、`TSLA`（特斯拉）、`MSFT`（微軟）
-   - 台股示例：`2330`（台積電）、`2317`（鴻海）、`2454`（聯發科）
-   - 港股示例：`00700`（騰訊）、`09988`（阿里巴巴）
-3. **選擇分析日期**：默認為今天
-4. **調整研究深度**：拖動滑桿選擇 1-5 級
-5. **選擇分析師團隊**：勾選需要的分析師（建議全選）
+---
 
-### 步驟 2: 開始分析
+## 📖 使用方法
 
-點擊 **"🚀 開始分析"** 按鈕，系統將：
-1. 初始化分析環境
-2. 調用各個分析師 Agent 進行分析
-3. 進行多空辯論
-4. 執行風險評估
-5. 生成最終投資建議
+### 1. 配置分析參數
 
-### 步驟 3: 查看結果
+| 參數 | 說明 | 示例 |
+|------|------|------|
+| 市場選擇 | 選擇交易市場 | 美股 / 台股 / 港股 |
+| 股票代碼 | 輸入標的代碼 | `TSLA`, `2330`, `00700` |
+| 分析日期 | 選擇分析日期 | 預設為今天 |
+| 研究深度 | 1-5 級可調 | 建議使用 3 級（標準） |
+| 分析師團隊 | 勾選需要的分析師 | 建議全選以獲得全面分析 |
 
-分析完成後，您將看到：
+### 2. 查看分析結果
 
-#### 📊 投資決策摘要
-- **投資建議**：買入/持有/賣出
-- **置信度**：AI 對建議的信心程度（0-100%）
-- **風險評分**：投資風險等級（0-100%）
-- **目標價位**：預期的合理價格
+**投資決策摘要**
+- 💡 投資建議（買入/持有/賣出）
+- 📊 置信度評分（0-100%）
+- ⚠️ 風險評分（0-100%）
+- 🎯 目標價位
 
-#### 📋 詳細分析報告
-點擊 **"📊 查看分析報告"** 可查看：
+**詳細分析報告**（六大維度）
 - 📈 技術面分析
 - 💼 基本面分析
 - 💬 市場情緒分析
 - 📰 新聞事件分析
-- ⚠️ 風險評估（含多空辯論）
+- ⚠️ 風險評估
 - 💡 投資建議
-
-## 💰 費用說明
-
-本系統使用 OpenAI API，需要支付 API 調用費用：
-
-### 模型費用（gpt-4o-mini）
-- **輸入**：$0.15 / 1M tokens
-- **輸出**：$0.60 / 1M tokens
-
-### 預估成本
-- **快速分析（1級）**：約 $0.02 - $0.05 USD
-- **標準分析（3級）**：約 $0.05 - $0.10 USD
-- **深度分析（5級）**：約 $0.10 - $0.20 USD
-
-### 成本控制建議
-1. 在 [OpenAI 使用限制頁面](https://platform.openai.com/account/limits) 設置每月使用額度
-2. 日常使用選擇標準分析（3級）即可
-3. 僅在需要深入研究時使用 5 級分析
-4. 可考慮使用更便宜的模型（在 `config.js` 中修改）
-
-## ⚠️ 重要提示
-
-### 安全注意事項
-- ❌ **切勿**將包含 API Key 的 `config.js` 上傳到 GitHub 等公開平台
-- ❌ **切勿**與他人分享您的 API Key
-- ✅ 如果 API Key 洩露，立即在 OpenAI 平台撤銷並重新生成
-
-### 投資風險聲明
-- ⚠️ 本系統提供的分析僅供參考，不構成投資建議
-- ⚠️ 投資有風險，決策需謹慎
-- ⚠️ AI 分析可能存在偏差或錯誤
-- ⚠️ 建議結合其他資訊來源做出投資決策
-- ⚠️ 過往表現不代表未來結果
-
-### 數據來源說明
-- 本系統使用 ChatGPT 的知識庫進行分析
-- 數據更新時間取決於 ChatGPT 的訓練數據截止日期
-- 即時市場數據需結合其他金融資訊平台
-
-## 🎨 設計理念
-
-本系統的設計參考專業投資分析簡報風格：
-- **藍色系配色**：代表專業、穩重、值得信賴
-- **卡片式佈局**：清晰的資訊層級
-- **漸層設計**：現代科技感
-- **響應式設計**：支援各種螢幕尺寸
-
-## 🔧 自定義設置
-
-### 修改模型
-在 `config.js` 中修改：
-```javascript
-MODEL: 'gpt-4o-mini',  // 改為 'gpt-4o' 或其他模型
-```
-
-### 調整分析參數
-在 `config.js` 中修改：
-```javascript
-MAX_TOKENS: 2000,      // 增加可獲得更詳細分析
-TEMPERATURE: 0.7,      // 0-2，越高越有創意
-```
-
-### 自定義分析提示詞
-在 `script.js` 的 `callAgentAPI` 函數中修改各個 Agent 的提示詞。
-
-## 🐛 故障排除
-
-### 問題：顯示 "API 調用失敗"
-- 檢查 API Key 是否正確設置
-- 確認 OpenAI 帳戶有足夠餘額
-- 檢查網路連接
-
-### 問題：分析速度很慢
-- 降低分析深度等級
-- 減少選擇的分析師數量
-- 考慮使用更快的模型
-
-### 問題：分析結果不準確
-- 增加分析深度等級
-- 確保股票代碼正確
-- 注意：AI 的分析基於訓練數據，可能不包含最新資訊
-
-## 📞 技術支持
-
-如有問題或建議，請：
-1. 查看本 README 文件
-2. 檢查瀏覽器控制台的錯誤訊息
-3. 查閱 [OpenAI API 文檔](https://platform.openai.com/docs)
-
-## 📄 授權聲明
-
-本項目僅供學習和研究使用。使用者需自行承擔使用本系統產生的所有風險和責任。
 
 ---
 
-**🤖 Generated with AI Multi-Agent System | Powered by ChatGPT API**
+## 💰 費用說明
+
+### 📊 API 成本（使用 gpt-4o-mini）
+
+| 分析深度 | 預估費用（USD） | 適用場景 |
+|---------|----------------|----------|
+| 🟢 1級（快速） | $0.02 - $0.05 | 快速瀏覽、初步篩選 |
+| 🟡 3級（標準） | $0.05 - $0.10 | **日常使用（推薦）** |
+| 🔴 5級（深度） | $0.10 - $0.20 | 重要決策、深入研究 |
+
+### 💡 省錢技巧
+
+1. ✅ 設置 [OpenAI 使用限制](https://platform.openai.com/account/limits)
+2. ✅ 日常使用選擇 3 級分析
+3. ✅ 測試時使用 1-2 級
+4. ✅ 考慮使用 gpt-4o-mini（已是最便宜的選項）
+
+---
+
+## ⚠️ 重要聲明
+
+### 🔒 安全注意事項
+
+| ❌ 禁止 | ✅ 建議 |
+|---------|---------|
+| 上傳 `config.js` 到公開平台 | 使用 `.gitignore` 保護 API Key |
+| 分享您的 API Key | 定期更換 API Key |
+| 在公開場合展示 API Key | 設置使用額度限制 |
+
+### 📉 投資風險聲明
+
+```
+⚠️ 重要提示：
+• 本系統提供的分析僅供參考，不構成專業投資建議
+• AI 分析基於歷史數據，可能存在偏差或錯誤
+• 投資有風險，決策需謹慎
+• 建議結合其他資訊來源並諮詢專業財務顧問
+• 過往表現不代表未來結果
+```
+
+---
+
+## 🎨 技術架構
+
+### 前端技術棧
+- **HTML5** - 語義化結構
+- **CSS3** - 漸層設計、響應式佈局
+- **Vanilla JavaScript** - ES6+、Async/Await
+- **OpenAI API** - GPT-4o-mini
+
+### 設計理念
+- 🎨 **專業藍色系** - 穩重可信賴
+- 📱 **響應式設計** - 支援各種裝置
+- ⚡ **流暢動畫** - 提升使用體驗
+- 🎯 **清晰層級** - 卡片式資訊架構
+
+---
+
+## 🔧 進階設定
+
+### 修改 AI 模型
+
+```javascript
+// 在 config.js 中
+MODEL: 'gpt-4o',  // 使用更強大的模型（成本較高）
+```
+
+### 自訂分析提示詞
+
+```javascript
+// 在 script.js 的 callAgentAPI 函數中
+// 修改各個 agent 的 prompts 物件
+```
+
+### 調整參數
+
+```javascript
+// 在 config.js 中
+MAX_TOKENS: 3000,     // 獲得更詳細的分析
+TEMPERATURE: 0.5,     // 降低創意性，提高準確性
+```
+
+---
+
+## 🐛 故障排除
+
+<details>
+<summary><b>問題：顯示 "API 調用失敗"</b></summary>
+
+**解決方案：**
+1. 檢查 `config.js` 中的 API Key 是否正確
+2. 確認 OpenAI 帳戶有足夠餘額
+3. 檢查網路連接狀態
+4. 查看瀏覽器控制台的詳細錯誤訊息（F12）
+</details>
+
+<details>
+<summary><b>問題：分析速度很慢</b></summary>
+
+**解決方案：**
+1. 降低分析深度（1-2 級）
+2. 減少選擇的分析師數量
+3. 檢查網路速度
+</details>
+
+<details>
+<summary><b>問題：分析結果不準確</b></summary>
+
+**可能原因：**
+1. ChatGPT 知識截止日期限制（不含最新資訊）
+2. 股票代碼輸入錯誤
+3. 分析深度不足
+
+**建議：**
+1. 增加分析深度到 4-5 級
+2. 交叉驗證其他資訊來源
+3. 查看詳細報告而非僅看摘要
+</details>
+
+---
+
+## 📚 文檔
+
+- 📘 [完整使用手冊](README.md) - 本文件
+- ⚡ [快速開始指南](QUICK_START.md) - 5 分鐘上手
+- 🔑 [API 配置說明](config.example.js) - API Key 設置
+- 📜 [授權條款](LICENSE) - MIT License
+
+---
+
+## 🤝 貢獻指南
+
+歡迎提交 Pull Request 或 Issue！
+
+### 如何貢獻
+
+1. Fork 本專案
+2. 創建您的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交您的變更 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 開啟 Pull Request
+
+### 開發路線圖
+
+- [ ] 支援更多市場（日股、A股等）
+- [ ] 增加技術指標圖表視覺化
+- [ ] 批次分析多檔股票
+- [ ] 歷史分析結果保存功能
+- [ ] 自訂分析師 Agent
+- [ ] 支援其他 AI 模型（Claude、Gemini 等）
+
+---
+
+## 📞 聯絡與支援
+
+- 💬 **問題回報**：[GitHub Issues](https://github.com/elsonyeh/AI-Investment-Decision-Assistant/issues)
+- 📧 **功能建議**：透過 Issues 提出
+- 📖 **OpenAI 文檔**：[platform.openai.com/docs](https://platform.openai.com/docs)
+
+---
+
+## 📄 授權協議
+
+本專案採用 [MIT License](LICENSE) 授權。
+
+**投資風險聲明：** 本軟體僅供教育和研究使用。使用者需自行承擔使用本系統產生的所有風險和責任。
+
+---
+
+## 🙏 致謝
+
+- [OpenAI](https://openai.com/) - 提供強大的 GPT API
+- 所有貢獻者和使用者的支持
+
+---
+
+<div align="center">
+
+**🤖 Generated with AI Multi-Agent System**
+
+**Powered by ChatGPT API**
+
+⭐ 如果這個專案對您有幫助，歡迎給個星星！⭐
 
 最後更新：2025-12-16
+
+</div>

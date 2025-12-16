@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: AI投資決策小幫手 Multi-Agent系統\n\n✨ 功能特色:\n- Multi-Agent 投資分析架構（技術、基本面、新聞、情緒分析師）\n- 多空辯論機制\n- 風險管理評估\n- 支援美股、台股、港股分析\n- ChatGPT API 整合\n- 5級分析深度可調\n- 響應式專業UI設計\n\n📦 包含文件:\n- index.html: 主介面\n- styles.css: 專業藍色系樣式\n- script.js: Multi-Agent 邏輯\n- config.example.js: API 配置範例\n- README.md: 完整使用說明\n- QUICK_START.md: 快速開始指南\n- .gitignore: 保護敏感配置\n\n🤖 Generated with Claude Code\nEOF\n)\")",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)"
     ]
   }
 }
