@@ -41,6 +41,10 @@
                 <span class="nav-icon">📈</span>
                 <span class="nav-text">投資儀表板</span>
             </a>
+            <a href="#" class="nav-item" data-page="settings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-text">設定</span>
+            </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -394,6 +398,80 @@
                     <div class="chart-container">
                         <h3>投資建議分布</h3>
                         <canvas id="recommendationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 設定頁面 -->
+            <div class="page" id="page-settings">
+                <div class="page-header">
+                    <h2>⚙️ 設定</h2>
+                    <p>配置您的 API Key 和其他選項</p>
+                </div>
+
+                <div class="settings-container">
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <h3>🔑 OpenAI API Key</h3>
+                            <span class="api-status-badge" id="api-key-status">未設定</span>
+                        </div>
+                        <p class="setting-description">
+                            請輸入您的 OpenAI API Key 以使用 AI 分析功能。您的 API Key 僅保存在本地瀏覽器中，不會上傳到任何伺服器。
+                        </p>
+
+                        <div class="api-key-input-group">
+                            <input
+                                type="password"
+                                id="api-key-input"
+                                placeholder="sk-proj-..."
+                                class="api-key-input"
+                            >
+                            <button id="toggle-api-key" class="btn-secondary">👁️ 顯示</button>
+                        </div>
+
+                        <div class="setting-actions">
+                            <button id="save-api-key-btn" class="btn-primary">💾 保存 API Key</button>
+                            <button id="clear-api-key-btn" class="btn-danger">🗑️ 清除 API Key</button>
+                        </div>
+
+                        <div class="setting-help">
+                            <h4>📖 如何獲取 API Key？</h4>
+                            <ol>
+                                <li>訪問 <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI API Keys</a></li>
+                                <li>登入您的 OpenAI 帳號</li>
+                                <li>點擊 "Create new secret key" 創建新密鑰</li>
+                                <li>複製密鑰並粘貼到上方輸入框</li>
+                                <li>點擊「保存 API Key」</li>
+                            </ol>
+
+                            <h4>⚠️ 安全提醒</h4>
+                            <ul>
+                                <li>API Key 存儲在您的瀏覽器本地存儲中</li>
+                                <li>清除瀏覽器數據會刪除已保存的 API Key</li>
+                                <li>建議在 OpenAI 平台設置使用額度限制</li>
+                                <li>定期更換 API Key 以確保安全</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <h3>🎨 其他設定</h3>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="model-select">AI 模型選擇</label>
+                            <select id="model-select" class="setting-select">
+                                <option value="gpt-4o-mini">GPT-4o Mini (推薦，成本較低)</option>
+                                <option value="gpt-4o">GPT-4o (更強大)</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="auto-save">自動保存分析記錄</label>
+                            <input type="checkbox" id="auto-save" checked>
+                        </div>
                     </div>
                 </div>
             </div>

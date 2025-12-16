@@ -8,7 +8,9 @@ let analysisHistory = [];
 // ===== LocalStorage 鍵名 =====
 const STORAGE_KEYS = {
     WATCHLIST: 'ai_investment_watchlist',
-    HISTORY: 'ai_investment_history'
+    HISTORY: 'ai_investment_history',
+    API_KEY: 'ai_investment_api_key',
+    MODEL: 'ai_investment_model'
 };
 
 // ===== DOM 元素 =====
@@ -96,7 +98,16 @@ const elements = {
 
     // 快速搜尋
     quickSearch: document.getElementById('quick-search'),
-    quickSearchBtn: document.getElementById('quick-search-btn')
+    quickSearchBtn: document.getElementById('quick-search-btn'),
+
+    // 設定頁面
+    apiKeyInput: document.getElementById('api-key-input'),
+    toggleApiKeyBtn: document.getElementById('toggle-api-key'),
+    saveApiKeyBtn: document.getElementById('save-api-key-btn'),
+    clearApiKeyBtn: document.getElementById('clear-api-key-btn'),
+    apiKeyStatus: document.getElementById('api-key-status'),
+    modelSelect: document.getElementById('model-select'),
+    autoSave: document.getElementById('auto-save')
 };
 
 // ===== 初始化 =====
@@ -121,6 +132,9 @@ function initApp() {
 
     // 檢查 API Key
     checkAPIStatus();
+
+    // 初始化設定
+    initSettings();
 }
 
 function bindEvents() {
@@ -459,18 +473,28 @@ async function runPortfolioManager(agentResults, debate, risk, market, stock) {
 }
 
 async function callChatGPT(prompt) {
-    if (!CONFIG.OPENAI_API_KEY || CONFIG.OPENAI_API_KEY === 'your-api-key-here') {
-        throw new Error('請先在 config.js 中設置您的 OpenAI API Key');
+    // 優先從 localStorage 讀取 API Key
+    let apiKey = getApiKey();
+
+    // 如果 localStorage 沒有，嘗試從 CONFIG 讀取（向後兼容）
+    if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.OPENAI_API_KEY && CONFIG.OPENAI_API_KEY !== 'your-api-key-here') {
+        apiKey = CONFIG.OPENAI_API_KEY;
     }
+
+    if (!apiKey) {
+        throw new Error('請先在設定頁面設置您的 OpenAI API Key');
+    }
+
+    const model = getModel();
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`
+            'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-            model: CONFIG.MODEL || 'gpt-4o-mini',
+            model: model,
             messages: [
                 { role: 'system', content: '你是專業的投資分析AI。' },
                 { role: 'user', content: prompt }
@@ -936,13 +960,133 @@ function exportToPDF() {
 function checkAPIStatus() {
     const statusDot = document.getElementById('api-status-dot');
     const statusText = document.getElementById('api-status-text');
+    const apiKey = getApiKey();
 
-    if (CONFIG.OPENAI_API_KEY && CONFIG.OPENAI_API_KEY !== 'your-api-key-here') {
+    // 同時檢查 localStorage 和 CONFIG
+    const hasApiKey = apiKey || (typeof CONFIG !== 'undefined' && CONFIG.OPENAI_API_KEY && CONFIG.OPENAI_API_KEY !== 'your-api-key-here');
+
+    if (hasApiKey) {
         statusDot.style.background = '#4caf50';
         statusText.textContent = 'API 已連接';
     } else {
         statusDot.style.background = '#f44336';
         statusText.textContent = 'API 未設置';
+    }
+}
+
+// ===== API Key 管理 =====
+function getApiKey() {
+    return localStorage.getItem(STORAGE_KEYS.API_KEY);
+}
+
+function saveApiKey(apiKey) {
+    localStorage.setItem(STORAGE_KEYS.API_KEY, apiKey);
+    checkAPIStatus();
+    updateApiKeyStatus();
+}
+
+function clearApiKey() {
+    localStorage.removeItem(STORAGE_KEYS.API_KEY);
+    checkAPIStatus();
+    updateApiKeyStatus();
+}
+
+function getModel() {
+    const savedModel = localStorage.getItem(STORAGE_KEYS.MODEL);
+    if (savedModel) return savedModel;
+
+    // 向後兼容：從 CONFIG 讀取
+    if (typeof CONFIG !== 'undefined' && CONFIG.MODEL) {
+        return CONFIG.MODEL;
+    }
+
+    return 'gpt-4o-mini'; // 默認值
+}
+
+function saveModel(model) {
+    localStorage.setItem(STORAGE_KEYS.MODEL, model);
+}
+
+function updateApiKeyStatus() {
+    const apiKeyStatus = elements.apiKeyStatus;
+    const apiKey = getApiKey();
+
+    if (apiKey) {
+        apiKeyStatus.textContent = '已設定';
+        apiKeyStatus.classList.add('connected');
+    } else {
+        apiKeyStatus.textContent = '未設定';
+        apiKeyStatus.classList.remove('connected');
+    }
+}
+
+function initSettings() {
+    // 加載 API Key 狀態
+    updateApiKeyStatus();
+
+    // 加載已保存的 API Key（只顯示前幾個字符）
+    const apiKey = getApiKey();
+    if (apiKey && elements.apiKeyInput) {
+        elements.apiKeyInput.value = apiKey;
+    }
+
+    // 加載模型設置
+    const model = getModel();
+    if (elements.modelSelect) {
+        elements.modelSelect.value = model;
+    }
+
+    // 切換顯示/隱藏 API Key
+    if (elements.toggleApiKeyBtn) {
+        elements.toggleApiKeyBtn.addEventListener('click', () => {
+            const input = elements.apiKeyInput;
+            if (input.type === 'password') {
+                input.type = 'text';
+                elements.toggleApiKeyBtn.textContent = '👁️ 隱藏';
+            } else {
+                input.type = 'password';
+                elements.toggleApiKeyBtn.textContent = '👁️ 顯示';
+            }
+        });
+    }
+
+    // 保存 API Key
+    if (elements.saveApiKeyBtn) {
+        elements.saveApiKeyBtn.addEventListener('click', () => {
+            const apiKey = elements.apiKeyInput.value.trim();
+            if (!apiKey) {
+                alert('請輸入 API Key！');
+                return;
+            }
+
+            if (!apiKey.startsWith('sk-')) {
+                alert('API Key 格式不正確！應該以 "sk-" 開頭。');
+                return;
+            }
+
+            saveApiKey(apiKey);
+            alert('API Key 已保存！');
+        });
+    }
+
+    // 清除 API Key
+    if (elements.clearApiKeyBtn) {
+        elements.clearApiKeyBtn.addEventListener('click', () => {
+            if (confirm('確定要清除 API Key 嗎？')) {
+                clearApiKey();
+                elements.apiKeyInput.value = '';
+                alert('API Key 已清除！');
+            }
+        });
+    }
+
+    // 保存模型選擇
+    if (elements.modelSelect) {
+        elements.modelSelect.addEventListener('change', () => {
+            const model = elements.modelSelect.value;
+            saveModel(model);
+            console.log('模型已更新為：', model);
+        });
     }
 }
 

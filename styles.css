@@ -978,6 +978,180 @@ body {
     }
 }
 
+/* ===== 設定頁面 ===== */
+.settings-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.setting-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.setting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.setting-header h3 {
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.api-status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+    background: #e0e0e0;
+    color: #666;
+}
+
+.api-status-badge.connected {
+    background: #4caf50;
+    color: white;
+}
+
+.setting-description {
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.api-key-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.api-key-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1em;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s ease;
+}
+
+.api-key-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.1);
+}
+
+.btn-secondary {
+    padding: 12px 20px;
+    background: #757575;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: #616161;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    padding: 12px 20px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background: #d32f2f;
+    transform: translateY(-2px);
+}
+
+.setting-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.setting-help {
+    background: #f5f5f5;
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.setting-help h4 {
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.setting-help ol,
+.setting-help ul {
+    margin: 0;
+    padding-left: 25px;
+}
+
+.setting-help li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+    color: #555;
+}
+
+.setting-help a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.setting-help a:hover {
+    text-decoration: underline;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 600;
+}
+
+.setting-select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1em;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.setting-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.setting-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
 /* ===== 動畫 ===== */
 @keyframes slideIn {
     from {
