@@ -5,6 +5,58 @@ let currentMarket = '';
 let watchlist = [];
 let analysisHistory = [];
 
+// ===== 股票代碼資料庫 =====
+const STOCK_DATABASE = {
+    TW: [
+        { code: '2330', name: '台積電', nameEn: 'TSMC' },
+        { code: '2317', name: '鴻海', nameEn: 'Hon Hai' },
+        { code: '2454', name: '聯發科', nameEn: 'MediaTek' },
+        { code: '2412', name: '中華電', nameEn: 'Chunghwa Telecom' },
+        { code: '2882', name: '國泰金', nameEn: 'Cathay FHC' },
+        { code: '2881', name: '富邦金', nameEn: 'Fubon FHC' },
+        { code: '2886', name: '兆豐金', nameEn: 'Mega FHC' },
+        { code: '2891', name: '中信金', nameEn: 'CTBC FHC' },
+        { code: '2303', name: '聯電', nameEn: 'UMC' },
+        { code: '2308', name: '台達電', nameEn: 'Delta Electronics' },
+        { code: '2357', name: '華碩', nameEn: 'ASUS' },
+        { code: '2382', name: '廣達', nameEn: 'Quanta' },
+        { code: '2395', name: '研華', nameEn: 'Advantech' },
+        { code: '3008', name: '大立光', nameEn: 'Largan' },
+        { code: '3711', name: '日月光投控', nameEn: 'ASE Technology' },
+        { code: '5880', name: '合庫金', nameEn: 'Taiwan Business Bank' },
+        { code: '6505', name: '台塑化', nameEn: 'Formosa Petrochemical' },
+        { code: '1301', name: '台塑', nameEn: 'Formosa Plastics' },
+        { code: '1303', name: '南亞', nameEn: 'Nan Ya Plastics' },
+        { code: '0050', name: '元大台灣50', nameEn: 'Yuanta Taiwan 50 ETF' },
+        { code: '0056', name: '元大高股息', nameEn: 'Yuanta High Dividend ETF' }
+    ],
+    US: [
+        { code: 'AAPL', name: 'Apple', nameCn: '蘋果' },
+        { code: 'MSFT', name: 'Microsoft', nameCn: '微軟' },
+        { code: 'GOOGL', name: 'Alphabet (Google)', nameCn: '谷歌' },
+        { code: 'AMZN', name: 'Amazon', nameCn: '亞馬遜' },
+        { code: 'TSLA', name: 'Tesla', nameCn: '特斯拉' },
+        { code: 'META', name: 'Meta (Facebook)', nameCn: 'Meta' },
+        { code: 'NVDA', name: 'NVIDIA', nameCn: '輝達' },
+        { code: 'TSM', name: 'Taiwan Semiconductor (ADR)', nameCn: '台積電ADR' },
+        { code: 'JPM', name: 'JPMorgan Chase', nameCn: '摩根大通' },
+        { code: 'V', name: 'Visa', nameCn: 'Visa' },
+        { code: 'WMT', name: 'Walmart', nameCn: '沃爾瑪' },
+        { code: 'JNJ', name: 'Johnson & Johnson', nameCn: '嬌生' },
+        { code: 'PG', name: 'Procter & Gamble', nameCn: '寶僑' },
+        { code: 'DIS', name: 'Walt Disney', nameCn: '迪士尼' },
+        { code: 'NFLX', name: 'Netflix', nameCn: '網飛' },
+        { code: 'PYPL', name: 'PayPal', nameCn: 'PayPal' },
+        { code: 'INTC', name: 'Intel', nameCn: '英特爾' },
+        { code: 'AMD', name: 'AMD', nameCn: '超微' },
+        { code: 'BABA', name: 'Alibaba', nameCn: '阿里巴巴' },
+        { code: 'NKE', name: 'Nike', nameCn: '耐克' },
+        { code: 'BA', name: 'Boeing', nameCn: '波音' },
+        { code: 'COST', name: 'Costco', nameCn: '好市多' },
+        { code: 'MA', name: 'Mastercard', nameCn: '萬事達卡' }
+    ]
+};
+
 // ===== LocalStorage 鍵名 =====
 const STORAGE_KEYS = {
     WATCHLIST: 'ai_investment_watchlist',
@@ -226,6 +278,9 @@ function bindEvents() {
     if (elements.startCompareBtn) {
         elements.startCompareBtn.addEventListener('click', showCompareSelection);
     }
+
+    // 智能建議列表
+    initStockAutocomplete();
 }
 
 // ===== 頁面切換 =====
@@ -291,6 +346,28 @@ async function startAnalysis() {
         return;
     }
 
+    // 驗證市場與代碼是否匹配
+    const validation = validateMarketMatch(market, stock);
+
+    if (!validation.valid) {
+        // 顯示確認對話框
+        showMarketMismatchDialog(validation, stock, (confirmedMarket) => {
+            // 使用確認後的市場進行分析
+            proceedWithAnalysis(confirmedMarket, stock, date, depth, selectedAgents);
+        });
+        return;
+    }
+
+    // 如果有警告但仍然有效
+    if (validation.warning) {
+        showNotification(validation.warning, 'info', 3000);
+    }
+
+    // 直接進行分析
+    proceedWithAnalysis(market, stock, date, depth, selectedAgents);
+}
+
+async function proceedWithAnalysis(market, stock, date, depth, selectedAgents) {
     currentStock = stock;
     currentMarket = market;
 
@@ -1733,6 +1810,258 @@ function viewStockDetail(stockId) {
 
     // 切換到分析頁面
     switchPage('analysis');
+}
+
+// ===== 智能建議列表 =====
+function initStockAutocomplete() {
+    const stockInput = elements.stockInput;
+    const marketSelect = elements.marketSelect;
+
+    // 創建建議列表容器
+    const suggestionBox = document.createElement('div');
+    suggestionBox.id = 'stock-suggestions';
+    suggestionBox.style.cssText = `
+        position: absolute;
+        background: white;
+        border: 2px solid #1976d2;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        width: ${stockInput.offsetWidth}px;
+    `;
+
+    // 插入到輸入框後面
+    stockInput.parentElement.style.position = 'relative';
+    stockInput.parentElement.appendChild(suggestionBox);
+
+    // 輸入事件
+    stockInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim().toUpperCase();
+        const market = marketSelect.value;
+
+        if (query.length === 0) {
+            suggestionBox.style.display = 'none';
+            return;
+        }
+
+        const suggestions = searchStocks(query, market);
+        displaySuggestions(suggestions, suggestionBox, stockInput);
+    });
+
+    // 點擊外部關閉建議列表
+    document.addEventListener('click', (e) => {
+        if (e.target !== stockInput && !suggestionBox.contains(e.target)) {
+            suggestionBox.style.display = 'none';
+        }
+    });
+
+    // 市場切換時更新建議
+    marketSelect.addEventListener('change', () => {
+        if (stockInput.value.trim()) {
+            const query = stockInput.value.trim().toUpperCase();
+            const suggestions = searchStocks(query, marketSelect.value);
+            displaySuggestions(suggestions, suggestionBox, stockInput);
+        }
+    });
+}
+
+function searchStocks(query, market) {
+    const stocks = STOCK_DATABASE[market] || [];
+
+    return stocks.filter(stock => {
+        const codeMatch = stock.code.includes(query);
+        const nameMatch = stock.name.toLowerCase().includes(query.toLowerCase());
+        const nameEnMatch = stock.nameEn && stock.nameEn.toLowerCase().includes(query.toLowerCase());
+        const nameCnMatch = stock.nameCn && stock.nameCn.includes(query);
+
+        return codeMatch || nameMatch || nameEnMatch || nameCnMatch;
+    }).slice(0, 10); // 最多顯示10個
+}
+
+function displaySuggestions(suggestions, suggestionBox, stockInput) {
+    if (suggestions.length === 0) {
+        suggestionBox.style.display = 'none';
+        return;
+    }
+
+    const market = elements.marketSelect.value;
+
+    suggestionBox.innerHTML = suggestions.map(stock => {
+        const displayName = market === 'TW'
+            ? `${stock.name} (${stock.nameEn})`
+            : `${stock.name}${stock.nameCn ? ' (' + stock.nameCn + ')' : ''}`;
+
+        return `
+            <div class="suggestion-item" data-code="${stock.code}" style="
+                padding: 12px 16px;
+                cursor: pointer;
+                border-bottom: 1px solid #f0f0f0;
+                transition: background 0.2s;
+            " onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: bold; color: #1976d2; font-size: 14px;">${stock.code}</div>
+                        <div style="font-size: 12px; color: #666; margin-top: 2px;">${displayName}</div>
+                    </div>
+                    <div style="color: #1976d2; font-size: 20px;">→</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    suggestionBox.style.display = 'block';
+
+    // 綁定點擊事件
+    suggestionBox.querySelectorAll('.suggestion-item').forEach(item => {
+        item.addEventListener('click', () => {
+            stockInput.value = item.dataset.code;
+            suggestionBox.style.display = 'none';
+            stockInput.focus();
+        });
+    });
+}
+
+// ===== 市場與代碼驗證 =====
+function detectMarketFromCode(code) {
+    const isTaiwanFormat = /^\d{4}$/.test(code);  // 4位數字
+    const isUSFormat = /^[A-Z]{1,5}$/.test(code); // 1-5個字母
+
+    if (isTaiwanFormat) return 'TW';
+    if (isUSFormat) return 'US';
+    return null;
+}
+
+function validateMarketMatch(selectedMarket, stockCode) {
+    const detectedMarket = detectMarketFromCode(stockCode);
+
+    if (!detectedMarket) {
+        return { valid: true, warning: '無法識別代碼格式，將使用選擇的市場進行分析' };
+    }
+
+    if (detectedMarket !== selectedMarket) {
+        return {
+            valid: false,
+            detectedMarket: detectedMarket,
+            selectedMarket: selectedMarket,
+            message: `您選擇了${getMarketName(selectedMarket)}，但輸入的代碼「${stockCode}」看起來像${getMarketName(detectedMarket)}格式`
+        };
+    }
+
+    return { valid: true };
+}
+
+function getMarketName(market) {
+    return market === 'TW' ? '台股' : '美股';
+}
+
+function showMarketMismatchDialog(validation, stockCode, onConfirm) {
+    const dialog = document.createElement('div');
+    dialog.id = 'market-mismatch-dialog';
+    dialog.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10003;
+        animation: fadeIn 0.2s ease-out;
+    `;
+
+    dialog.innerHTML = `
+        <div style="
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: scaleIn 0.3s ease-out;
+        ">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 48px; margin-bottom: 10px;">🤔</div>
+                <h3 style="margin: 0; color: #f57c00; font-size: 20px;">代碼與市場不匹配</h3>
+            </div>
+
+            <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
+                    <strong style="color: #e65100;">您選擇的市場：</strong>
+                    <span style="color: #333; font-size: 16px;">${getMarketName(validation.selectedMarket)}</span>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <strong style="color: #e65100;">輸入的代碼：</strong>
+                    <span style="color: #333; font-size: 18px; font-weight: bold;">${stockCode}</span>
+                </div>
+                <div>
+                    <strong style="color: #e65100;">檢測到格式：</strong>
+                    <span style="color: #1976d2; font-size: 16px; font-weight: bold;">${getMarketName(validation.detectedMarket)}</span>
+                </div>
+            </div>
+
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+                <div style="font-size: 14px; color: #1565c0; line-height: 1.6;">
+                    💡 <strong>建議：</strong>我們偵測到您輸入的代碼格式更像${getMarketName(validation.detectedMarket)}。您想要：
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button id="mismatch-keep" style="
+                    flex: 1;
+                    padding: 12px 20px;
+                    border: 2px solid #1976d2;
+                    background: white;
+                    color: #1976d2;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 15px;
+                    font-weight: bold;
+                    transition: all 0.2s;
+                " onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
+                    保持 ${getMarketName(validation.selectedMarket)}
+                </button>
+                <button id="mismatch-switch" style="
+                    flex: 1;
+                    padding: 12px 20px;
+                    border: none;
+                    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+                    color: white;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 15px;
+                    font-weight: bold;
+                    transition: all 0.2s;
+                    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(25, 118, 210, 0.4)'"
+                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(25, 118, 210, 0.3)'">
+                    切換為 ${getMarketName(validation.detectedMarket)} ⭐
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    // 綁定事件
+    document.getElementById('mismatch-keep').onclick = () => {
+        dialog.remove();
+        onConfirm(validation.selectedMarket);
+    };
+
+    document.getElementById('mismatch-switch').onclick = () => {
+        dialog.remove();
+        // 切換市場選擇
+        elements.marketSelect.value = validation.detectedMarket;
+        showNotification(`已自動切換為${getMarketName(validation.detectedMarket)}`, 'success');
+        onConfirm(validation.detectedMarket);
+    };
+
+    // 點擊背景不關閉（強制選擇）
 }
 
 // ===== 全局函數（供 HTML 調用）=====
