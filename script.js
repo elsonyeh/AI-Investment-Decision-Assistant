@@ -62,7 +62,17 @@ const STORAGE_KEYS = {
     WATCHLIST: 'ai_investment_watchlist',
     HISTORY: 'ai_investment_history',
     API_KEY: 'ai_investment_api_key',
-    MODEL: 'ai_investment_model'
+    MODEL: 'ai_investment_model',
+    STOCK_DB_TW: 'ai_investment_stock_db_tw',
+    STOCK_DB_US: 'ai_investment_stock_db_us',
+    STOCK_DB_TIMESTAMP: 'ai_investment_stock_db_timestamp'
+};
+
+// ===== 完整股票資料庫配置 =====
+const STOCK_DB_CONFIG = {
+    CACHE_DURATION: 7 * 24 * 60 * 60 * 1000, // 7天快取
+    TW_API_URL: 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL',
+    FALLBACK_MODE: true // 如果 API 失敗，使用內建資料
 };
 
 // ===== DOM 元素 =====
@@ -191,6 +201,9 @@ function initApp() {
 
     // 初始化設定
     initSettings();
+
+    // 載入完整股票資料庫（異步）
+    loadFullStockDatabase();
 }
 
 function bindEvents() {
@@ -1812,6 +1825,196 @@ function viewStockDetail(stockId) {
     switchPage('analysis');
 }
 
+// ===== 完整股票資料庫載入系統 =====
+let fullStockDatabase = {
+    TW: [],
+    US: []
+};
+
+async function loadFullStockDatabase() {
+    try {
+        // 檢查快取
+        const timestamp = localStorage.getItem(STORAGE_KEYS.STOCK_DB_TIMESTAMP);
+        const now = Date.now();
+
+        if (timestamp && (now - parseInt(timestamp)) < STOCK_DB_CONFIG.CACHE_DURATION) {
+            // 使用快取
+            const cachedTW = localStorage.getItem(STORAGE_KEYS.STOCK_DB_TW);
+            const cachedUS = localStorage.getItem(STORAGE_KEYS.STOCK_DB_US);
+
+            if (cachedTW) fullStockDatabase.TW = JSON.parse(cachedTW);
+            if (cachedUS) fullStockDatabase.US = JSON.parse(cachedUS);
+
+            console.log('📦 使用快取的股票資料庫');
+            console.log(`台股: ${fullStockDatabase.TW.length} 支, 美股: ${fullStockDatabase.US.length} 支`);
+            return;
+        }
+
+        // 載入新資料
+        console.log('🔄 載入完整股票資料庫...');
+
+        // 載入台股
+        await loadTaiwanStocks();
+
+        // 載入美股（擴充版）
+        loadUSStocks();
+
+        // 儲存快取
+        localStorage.setItem(STORAGE_KEYS.STOCK_DB_TW, JSON.stringify(fullStockDatabase.TW));
+        localStorage.setItem(STORAGE_KEYS.STOCK_DB_US, JSON.stringify(fullStockDatabase.US));
+        localStorage.setItem(STORAGE_KEYS.STOCK_DB_TIMESTAMP, now.toString());
+
+        console.log('✅ 股票資料庫載入完成');
+        console.log(`台股: ${fullStockDatabase.TW.length} 支, 美股: ${fullStockDatabase.US.length} 支`);
+
+    } catch (error) {
+        console.error('❌ 載入股票資料庫失敗:', error);
+        // 使用內建資料庫
+        fullStockDatabase.TW = STOCK_DATABASE.TW;
+        fullStockDatabase.US = STOCK_DATABASE.US;
+        console.log('📦 使用內建資料庫');
+    }
+}
+
+async function loadTaiwanStocks() {
+    try {
+        // 方法1: 嘗試從台灣證交所 API 載入
+        const response = await fetch(STOCK_DB_CONFIG.TW_API_URL, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+
+            // 轉換格式
+            fullStockDatabase.TW = data.map(stock => ({
+                code: stock.Code || stock.code,
+                name: stock.Name || stock.name,
+                nameEn: stock.NameEn || stock.nameEn || ''
+            })).filter(stock => stock.code && stock.name);
+
+            console.log(`✅ 從 API 載入 ${fullStockDatabase.TW.length} 支台股`);
+            return;
+        }
+    } catch (error) {
+        console.warn('⚠️ API 載入失敗，使用擴充資料庫');
+    }
+
+    // 方法2: 使用擴充的內建資料庫
+    fullStockDatabase.TW = getExtendedTaiwanStocks();
+}
+
+function getExtendedTaiwanStocks() {
+    // 擴充台股資料庫（包含更多常見股票）
+    return [
+        ...STOCK_DATABASE.TW,
+        // 科技股
+        { code: '2327', name: '國巨', nameEn: 'Yageo' },
+        { code: '2409', name: '友達', nameEn: 'AUO' },
+        { code: '2474', name: '可成', nameEn: 'Catcher' },
+        { code: '3034', name: '聯詠', nameEn: 'Novatek' },
+        { code: '3045', name: '台灣大', nameEn: 'Taiwan Mobile' },
+        { code: '6669', name: '緯穎', nameEn: 'Wiwynn' },
+
+        // 金融股
+        { code: '2834', name: '臺企銀', nameEn: 'Taiwan Business Bank' },
+        { code: '2883', name: '開發金', nameEn: 'CDIB FHC' },
+        { code: '2884', name: '玉山金', nameEn: 'E.SUN FHC' },
+        { code: '2885', name: '元大金', nameEn: 'Yuanta FHC' },
+        { code: '2887', name: '台新金', nameEn: 'Taishin FHC' },
+        { code: '2892', name: '第一金', nameEn: 'First FHC' },
+
+        // 傳產股
+        { code: '1216', name: '統一', nameEn: 'Uni-President' },
+        { code: '1326', name: '台化', nameEn: 'Taiwan Fertilizer' },
+        { code: '2002', name: '中鋼', nameEn: 'China Steel' },
+        { code: '2207', name: '和泰車', nameEn: 'Hotai Motor' },
+        { code: '2301', name: '光寶科', nameEn: 'Lite-On' },
+        { code: '2324', name: '仁寶', nameEn: 'Compal' },
+        { code: '2408', name: '南亞科', nameEn: 'Nanya Tech' },
+        { code: '2603', name: '長榮', nameEn: 'Evergreen Marine' },
+        { code: '2609', name: '陽明', nameEn: 'Yang Ming' },
+
+        // ETF
+        { code: '0051', name: '元大中型100', nameEn: 'Yuanta Taiwan Mid-Cap 100 ETF' },
+        { code: '0052', name: '富邦科技', nameEn: 'Fubon TWSE Taiwan Tech ETF' },
+        { code: '006208', name: '富邦台50', nameEn: 'Fubon TWSE Taiwan 50 ETF' },
+        { code: '00631L', name: '元大台灣50正2', nameEn: 'Yuanta Taiwan 50 2X ETF' },
+        { code: '00878', name: '國泰永續高股息', nameEn: 'Cathay MSCI Taiwan ESG Sustainability High Dividend Yield ETF' },
+        { code: '00679B', name: '元大美債20年', nameEn: 'Yuanta 20+ Year U.S. Treasury Bond ETF' }
+    ];
+}
+
+function loadUSStocks() {
+    // 擴充美股資料庫
+    fullStockDatabase.US = [
+        ...STOCK_DATABASE.US,
+        // FAANG+
+        { code: 'GOOG', name: 'Alphabet (Google) Class C', nameCn: '谷歌C股' },
+        { code: 'FB', name: 'Meta (Facebook) - Legacy', nameCn: 'Meta舊代碼' },
+
+        // 科技巨頭
+        { code: 'CRM', name: 'Salesforce', nameCn: 'Salesforce' },
+        { code: 'ADBE', name: 'Adobe', nameCn: 'Adobe' },
+        { code: 'ORCL', name: 'Oracle', nameCn: '甲骨文' },
+        { code: 'IBM', name: 'IBM', nameCn: 'IBM' },
+        { code: 'CSCO', name: 'Cisco', nameCn: '思科' },
+        { code: 'QCOM', name: 'Qualcomm', nameCn: '高通' },
+        { code: 'TXN', name: 'Texas Instruments', nameCn: '德州儀器' },
+        { code: 'AVGO', name: 'Broadcom', nameCn: '博通' },
+
+        // 電動車與能源
+        { code: 'RIVN', name: 'Rivian', nameCn: 'Rivian' },
+        { code: 'LCID', name: 'Lucid Motors', nameCn: 'Lucid' },
+        { code: 'F', name: 'Ford', nameCn: '福特' },
+        { code: 'GM', name: 'General Motors', nameCn: '通用汽車' },
+
+        // 金融
+        { code: 'BAC', name: 'Bank of America', nameCn: '美國銀行' },
+        { code: 'WFC', name: 'Wells Fargo', nameCn: '富國銀行' },
+        { code: 'GS', name: 'Goldman Sachs', nameCn: '高盛' },
+        { code: 'MS', name: 'Morgan Stanley', nameCn: '摩根士丹利' },
+        { code: 'C', name: 'Citigroup', nameCn: '花旗' },
+
+        // 消費品
+        { code: 'KO', name: 'Coca-Cola', nameCn: '可口可樂' },
+        { code: 'PEP', name: 'PepsiCo', nameCn: '百事可樂' },
+        { code: 'MCD', name: 'McDonald\'s', nameCn: '麥當勞' },
+        { code: 'SBUX', name: 'Starbucks', nameCn: '星巴克' },
+
+        // 醫療保健
+        { code: 'UNH', name: 'UnitedHealth', nameCn: '聯合健康' },
+        { code: 'PFE', name: 'Pfizer', nameCn: '輝瑞' },
+        { code: 'MRNA', name: 'Moderna', nameCn: 'Moderna' },
+        { code: 'ABBV', name: 'AbbVie', nameCn: '艾伯維' },
+
+        // 零售
+        { code: 'TGT', name: 'Target', nameCn: 'Target' },
+        { code: 'HD', name: 'Home Depot', nameCn: '家得寶' },
+        { code: 'LOW', name: 'Lowe\'s', nameCn: '勞氏' },
+
+        // 能源
+        { code: 'XOM', name: 'Exxon Mobil', nameCn: '埃克森美孚' },
+        { code: 'CVX', name: 'Chevron', nameCn: '雪佛龍' },
+
+        // 中概股
+        { code: 'PDD', name: 'Pinduoduo', nameCn: '拼多多' },
+        { code: 'JD', name: 'JD.com', nameCn: '京東' },
+        { code: 'BIDU', name: 'Baidu', nameCn: '百度' },
+        { code: 'NIO', name: 'NIO', nameCn: '蔚來' },
+
+        // ETF
+        { code: 'SPY', name: 'SPDR S&P 500 ETF', nameCn: 'S&P 500 ETF' },
+        { code: 'QQQ', name: 'Invesco QQQ Trust', nameCn: '那斯達克100 ETF' },
+        { code: 'VOO', name: 'Vanguard S&P 500 ETF', nameCn: 'Vanguard S&P 500' },
+        { code: 'VTI', name: 'Vanguard Total Stock Market ETF', nameCn: 'Vanguard 全市場' },
+        { code: 'IWM', name: 'iShares Russell 2000 ETF', nameCn: '羅素2000 ETF' }
+    ];
+}
+
 // ===== 智能建議列表 =====
 function initStockAutocomplete() {
     const stockInput = elements.stockInput;
@@ -1869,7 +2072,10 @@ function initStockAutocomplete() {
 }
 
 function searchStocks(query, market) {
-    const stocks = STOCK_DATABASE[market] || [];
+    // 優先使用完整資料庫，如果沒有則使用內建資料庫
+    const stocks = (fullStockDatabase[market] && fullStockDatabase[market].length > 0)
+        ? fullStockDatabase[market]
+        : STOCK_DATABASE[market] || [];
 
     return stocks.filter(stock => {
         const codeMatch = stock.code.includes(query);
