@@ -107,7 +107,11 @@ const elements = {
     clearApiKeyBtn: document.getElementById('clear-api-key-btn'),
     apiKeyStatus: document.getElementById('api-key-status'),
     modelSelect: document.getElementById('model-select'),
-    autoSave: document.getElementById('auto-save')
+    autoSave: document.getElementById('auto-save'),
+
+    // 股票比較
+    startCompareBtn: document.getElementById('start-compare-btn'),
+    compareContainer: document.getElementById('compare-container')
 };
 
 // ===== 初始化 =====
@@ -217,6 +221,11 @@ function bindEvents() {
             elements.quickSearchBtn.click();
         }
     });
+
+    // 股票比較
+    if (elements.startCompareBtn) {
+        elements.startCompareBtn.addEventListener('click', showCompareSelection);
+    }
 }
 
 // ===== 頁面切換 =====
@@ -272,13 +281,13 @@ async function startAnalysis() {
     const depth = elements.depthSlider.value;
 
     if (!stock) {
-        alert('請輸入股票代碼！');
+        showNotification('請輸入股票代碼！', 'warning');
         return;
     }
 
     const selectedAgents = getSelectedAgents();
     if (selectedAgents.length === 0) {
-        alert('請至少選擇一個分析師！');
+        showNotification('請至少選擇一個分析師！', 'warning');
         return;
     }
 
@@ -297,7 +306,7 @@ async function startAnalysis() {
         await runAnalysis(market, stock, date, depth, selectedAgents);
     } catch (error) {
         console.error('分析錯誤:', error);
-        alert('分析過程中發生錯誤：' + error.message);
+        showNotification('分析過程中發生錯誤：' + error.message, 'error', 5000);
     }
 }
 
@@ -705,7 +714,53 @@ function displayDetailReport() {
         <div>${formatContent(risk)}</div>
     `;
 
-    elements.recContent.innerHTML = formatContent(decision);
+    // 投資建議：嘗試解析 JSON 並美化顯示
+    let decisionHTML = '';
+    try {
+        const jsonMatch = decision.match(/\{[\s\S]*"recommendation"[\s\S]*\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            decisionHTML = `
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="color: #1976d2; margin-top: 0;">📊 投資決策摘要</h3>
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #1e88e5;">建議操作：</strong>
+                        <span style="
+                            display: inline-block;
+                            padding: 4px 12px;
+                            background: ${getRecommendationColor(parsed.recommendation)};
+                            color: white;
+                            border-radius: 4px;
+                            margin-left: 10px;
+                        ">${parsed.recommendation}</span>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <strong style="color: #1e88e5;">信心度：</strong> ${parsed.confidence}%
+                        ${parsed.confidenceChange ? `<span style="color: #4caf50;">(↑${Math.abs(parsed.confidenceChange)}%)</span>` : ''}
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <strong style="color: #1e88e5;">風險評分：</strong> ${parsed.riskScore}%
+                        ${parsed.riskChange ? `<span style="color: ${parsed.riskChange >= 0 ? '#f44336' : '#4caf50'};">(${parsed.riskChange >= 0 ? '↑' : '↓'}${Math.abs(parsed.riskChange)}%)</span>` : ''}
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <strong style="color: #1e88e5;">目標價格：</strong> ${parsed.targetPrice}
+                    </div>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #1976d2;">
+                    <h4 style="color: #1976d2; margin-top: 0;">💡 分析推理</h4>
+                    <p style="line-height: 1.8; color: #333; margin: 0;">${parsed.reasoning}</p>
+                </div>
+            `;
+        } else {
+            // 無法解析 JSON，使用 formatContent 處理
+            decisionHTML = formatContent(decision);
+        }
+    } catch (e) {
+        console.error('解析投資建議失敗:', e);
+        decisionHTML = formatContent(decision);
+    }
+
+    elements.recContent.innerHTML = decisionHTML;
 }
 
 function formatContent(text) {
@@ -766,7 +821,7 @@ function addCurrentToWatchlist() {
 
     const exists = watchlist.find(item => item.stock === currentStock && item.market === currentMarket);
     if (exists) {
-        alert('此股票已在觀察清單中！');
+        showNotification('此股票已在觀察清單中！', 'warning');
         return;
     }
 
@@ -780,7 +835,7 @@ function addCurrentToWatchlist() {
     });
 
     saveWatchlist();
-    alert(`${currentStock} 已加入觀察清單！`);
+    showNotification(`${currentStock} 已加入觀察清單！`, 'success');
 }
 
 function extractRecommendation(decision) {
@@ -819,12 +874,13 @@ function renderWatchlist() {
 }
 
 function removeFromWatchlist(index) {
-    if (confirm('確定要移除此股票？')) {
+    showConfirm('確定要移除此股票？', () => {
         watchlist.splice(index, 1);
         saveWatchlist();
         renderWatchlist();
         updateStats();
-    }
+        showNotification('已移除股票', 'success');
+    });
 }
 
 function viewWatchlistItem(index) {
@@ -863,13 +919,14 @@ function updateHistoryBadge() {
 }
 
 function clearHistory() {
-    if (confirm('確定要清空所有歷史記錄嗎？此操作無法撤銷！')) {
+    showConfirm('確定要清空所有歷史記錄嗎？此操作無法撤銷！', () => {
         analysisHistory = [];
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(analysisHistory));
         updateHistoryBadge();
         renderHistory();
         updateStats();
-    }
+        showNotification('歷史記錄已清空', 'success');
+    });
 }
 
 function renderHistory() {
@@ -908,13 +965,14 @@ function viewHistoryItem(index) {
 }
 
 function removeHistory(index) {
-    if (confirm('確定要刪除此記錄？')) {
+    showConfirm('確定要刪除此記錄？', () => {
         analysisHistory.splice(index, 1);
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(analysisHistory));
         updateHistoryBadge();
         renderHistory();
         updateStats();
-    }
+        showNotification('記錄已刪除', 'success');
+    });
 }
 
 // ===== 統計與儀表板 =====
@@ -1015,11 +1073,11 @@ function renderRecommendationChart() {
 // ===== 匯出 PDF =====
 function exportToPDF() {
     if (!analysisData) {
-        alert('沒有可匯出的分析數據！');
+        showNotification('沒有可匯出的分析數據！', 'warning');
         return;
     }
 
-    alert('PDF 匯出功能開發中，敬請期待！\n\n您可以：\n1. 截圖保存報告\n2. 複製文字內容\n3. 使用瀏覽器的列印功能（Ctrl+P）');
+    showNotification('PDF 匯出功能開發中，敬請期待！您可以使用瀏覽器的列印功能（Ctrl+P）', 'info', 5000);
 }
 
 // ===== 檢查 API 狀態 =====
@@ -1145,28 +1203,28 @@ function initSettings() {
         elements.saveApiKeyBtn.addEventListener('click', () => {
             const apiKey = elements.apiKeyInput.value.trim();
             if (!apiKey) {
-                alert('請輸入 API Key！');
+                showNotification('請輸入 API Key！', 'warning');
                 return;
             }
 
             if (!apiKey.startsWith('sk-')) {
-                alert('API Key 格式不正確！應該以 "sk-" 開頭。');
+                showNotification('API Key 格式不正確！應該以 "sk-" 開頭。', 'error');
                 return;
             }
 
             saveApiKey(apiKey);
-            alert('API Key 已保存！');
+            showNotification('API Key 已保存！', 'success');
         });
     }
 
     // 清除 API Key
     if (elements.clearApiKeyBtn) {
         elements.clearApiKeyBtn.addEventListener('click', () => {
-            if (confirm('確定要清除 API Key 嗎？')) {
+            showConfirm('確定要清除 API Key 嗎？', () => {
                 clearApiKey();
                 elements.apiKeyInput.value = '';
-                alert('API Key 已清除！');
-            }
+                showNotification('API Key 已清除！', 'success');
+            });
         });
     }
 
@@ -1195,8 +1253,480 @@ function getAgentName(type) {
     return names[type] || type;
 }
 
+// ===== 自製通知系統 =====
+function showNotification(message, type = 'info', duration = 3000) {
+    // 移除舊通知
+    const oldNotification = document.getElementById('custom-notification');
+    if (oldNotification) {
+        oldNotification.remove();
+    }
+
+    const colors = {
+        success: { bg: '#4caf50', icon: '✓' },
+        error: { bg: '#f44336', icon: '✕' },
+        warning: { bg: '#ff9800', icon: '⚠' },
+        info: { bg: '#2196f3', icon: 'ℹ' }
+    };
+
+    const config = colors[type] || colors.info;
+
+    const notification = document.createElement('div');
+    notification.id = 'custom-notification';
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${config.bg};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 15px;
+        max-width: 400px;
+        animation: slideIn 0.3s ease-out;
+    `;
+
+    notification.innerHTML = `
+        <span style="font-size: 20px; font-weight: bold;">${config.icon}</span>
+        <span style="flex: 1;">${message}</span>
+        <button onclick="this.parentElement.remove()" style="
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+        ">×</button>
+    `;
+
+    document.body.appendChild(notification);
+
+    // 自動消失
+    if (duration > 0) {
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, duration);
+    }
+}
+
+function showConfirm(message, onConfirm, onCancel) {
+    // 移除舊對話框
+    const oldDialog = document.getElementById('custom-confirm');
+    if (oldDialog) {
+        oldDialog.remove();
+    }
+
+    const dialog = document.createElement('div');
+    dialog.id = 'custom-confirm';
+    dialog.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10002;
+        animation: fadeIn 0.2s ease-out;
+    `;
+
+    dialog.innerHTML = `
+        <div style="
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            animation: scaleIn 0.3s ease-out;
+        ">
+            <div style="font-size: 18px; color: #333; margin-bottom: 20px; line-height: 1.6;">
+                ${message}
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="confirm-cancel" style="
+                    padding: 10px 24px;
+                    border: 1px solid #ccc;
+                    background: white;
+                    color: #666;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: all 0.2s;
+                ">取消</button>
+                <button id="confirm-ok" style="
+                    padding: 10px 24px;
+                    border: none;
+                    background: #1976d2;
+                    color: white;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: all 0.2s;
+                ">確定</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    // 添加動畫樣式
+    if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes scaleIn {
+                from { transform: scale(0.9); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+            }
+            #confirm-ok:hover { background: #1565c0; }
+            #confirm-cancel:hover { background: #f5f5f5; }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // 綁定事件
+    document.getElementById('confirm-ok').onclick = () => {
+        dialog.remove();
+        if (onConfirm) onConfirm();
+    };
+
+    document.getElementById('confirm-cancel').onclick = () => {
+        dialog.remove();
+        if (onCancel) onCancel();
+    };
+
+    // 點擊背景關閉
+    dialog.onclick = (e) => {
+        if (e.target === dialog) {
+            dialog.remove();
+            if (onCancel) onCancel();
+        }
+    };
+}
+
+// ===== 股票比較功能 =====
+let selectedStocksForCompare = [];
+
+function showCompareSelection() {
+    // 合併觀察清單和歷史記錄
+    const allStocks = [];
+
+    // 從觀察清單添加
+    watchlist.forEach(item => {
+        allStocks.push({
+            id: `watchlist_${item.stock}_${item.market}`,
+            stock: item.stock,
+            market: item.market,
+            aiScore: item.aiScore,
+            recommendation: item.recommendation,
+            data: item.data,
+            source: '觀察清單'
+        });
+    });
+
+    // 從歷史記錄添加（避免重複）
+    analysisHistory.forEach(item => {
+        const exists = allStocks.find(s => s.stock === item.stock && s.market === item.market);
+        if (!exists) {
+            allStocks.push({
+                id: `history_${item.id}`,
+                stock: item.stock,
+                market: item.market,
+                aiScore: item.aiScore.overall,
+                recommendation: extractRecommendation(item.decision),
+                data: item,
+                source: '歷史記錄'
+            });
+        }
+    });
+
+    if (allStocks.length === 0) {
+        showNotification('沒有可比較的股票！請先進行分析或加入觀察清單。', 'warning');
+        return;
+    }
+
+    // 創建選擇對話框
+    const dialogHTML = `
+        <div id="compare-dialog" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        ">
+            <div style="
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                max-width: 600px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+            ">
+                <h3 style="margin: 0 0 20px 0; color: #1976d2;">選擇要比較的股票（最多4檔）</h3>
+                <div id="stock-selection-list">
+                    ${allStocks.map(stock => `
+                        <label style="
+                            display: flex;
+                            align-items: center;
+                            padding: 12px;
+                            margin-bottom: 10px;
+                            border: 2px solid #e0e0e0;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                        " onmouseover="this.style.borderColor='#1976d2'" onmouseout="this.style.borderColor='#e0e0e0'">
+                            <input type="checkbox" value="${stock.id}" style="margin-right: 10px;" onchange="updateCompareSelection(this)">
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold; color: #333;">${stock.market}: ${stock.stock}</div>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                                    來源: ${stock.source} | AI評分: ${stock.aiScore.toFixed(1)}/10 | ${stock.recommendation}
+                                </div>
+                            </div>
+                        </label>
+                    `).join('')}
+                </div>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button onclick="cancelCompare()" style="
+                        padding: 10px 20px;
+                        margin-right: 10px;
+                        border: 1px solid #ccc;
+                        background: white;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    ">取消</button>
+                    <button onclick="confirmCompare()" style="
+                        padding: 10px 20px;
+                        border: none;
+                        background: #1976d2;
+                        color: white;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    ">開始比較</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 移除舊對話框（如果存在）
+    const oldDialog = document.getElementById('compare-dialog');
+    if (oldDialog) {
+        oldDialog.remove();
+    }
+
+    // 添加新對話框
+    document.body.insertAdjacentHTML('beforeend', dialogHTML);
+
+    // 保存所有股票數據供後續使用
+    window.allStocksForCompare = allStocks;
+}
+
+function updateCompareSelection(checkbox) {
+    const checkboxes = document.querySelectorAll('#stock-selection-list input[type="checkbox"]');
+    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+
+    // 限制最多選擇4個
+    if (checkedCount > 4) {
+        checkbox.checked = false;
+        showNotification('最多只能選擇 4 檔股票進行比較！', 'warning');
+    }
+}
+
+function cancelCompare() {
+    const dialog = document.getElementById('compare-dialog');
+    if (dialog) {
+        dialog.remove();
+    }
+    window.allStocksForCompare = null;
+}
+
+function confirmCompare() {
+    const checkboxes = document.querySelectorAll('#stock-selection-list input[type="checkbox"]:checked');
+
+    if (checkboxes.length < 2) {
+        showNotification('請至少選擇 2 檔股票進行比較！', 'warning');
+        return;
+    }
+
+    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+    const selectedStocks = window.allStocksForCompare.filter(s => selectedIds.includes(s.id));
+
+    // 關閉對話框
+    cancelCompare();
+
+    // 顯示比較結果
+    displayCompareResults(selectedStocks);
+}
+
+function displayCompareResults(stocks) {
+    const container = elements.compareContainer;
+
+    // 保留數據供查看詳情使用
+    if (!window.allStocksForCompare) {
+        window.allStocksForCompare = stocks;
+    }
+
+    container.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: #1976d2;">比較 ${stocks.length} 檔股票</h3>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+            ${stocks.map(stock => `
+                <div class="compare-card" style="
+                    background: white;
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    border: 2px solid ${getRecommendationColor(stock.recommendation)};
+                ">
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0 0 5px 0; color: #333;">${stock.market}: ${stock.stock}</h3>
+                        <span style="
+                            display: inline-block;
+                            padding: 4px 12px;
+                            background: ${getRecommendationColor(stock.recommendation)};
+                            color: white;
+                            border-radius: 4px;
+                            font-size: 12px;
+                        ">${stock.recommendation}</span>
+                    </div>
+
+                    <div style="
+                        width: 120px;
+                        height: 120px;
+                        margin: 20px auto;
+                        position: relative;
+                    ">
+                        <svg width="120" height="120">
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="#e0e0e0" stroke-width="10"/>
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="${getScoreColor(stock.aiScore)}"
+                                stroke-width="10" stroke-dasharray="314"
+                                stroke-dashoffset="${314 - (stock.aiScore / 10) * 314}"
+                                transform="rotate(-90 60 60)"/>
+                        </svg>
+                        <div style="
+                            position: absolute;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%);
+                            text-align: center;
+                        ">
+                            <div style="font-size: 28px; font-weight: bold; color: ${getScoreColor(stock.aiScore)};">
+                                ${stock.aiScore.toFixed(1)}
+                            </div>
+                            <div style="font-size: 12px; color: #666;">AI 評分</div>
+                        </div>
+                    </div>
+
+                    ${stock.data ? `
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #1976d2;">技術面:</strong> ${stock.data.aiScore.technical.toFixed(1)}/10
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #1976d2;">基本面:</strong> ${stock.data.aiScore.fundamental.toFixed(1)}/10
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #1976d2;">情緒面:</strong> ${stock.data.aiScore.sentiment.toFixed(1)}/10
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <button onclick="viewStockDetail('${stock.id}')" style="
+                        width: 100%;
+                        padding: 10px;
+                        margin-top: 15px;
+                        border: none;
+                        background: #1976d2;
+                        color: white;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">查看詳細分析</button>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    // 滾動到比較結果
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+
+function getRecommendationColor(recommendation) {
+    if (recommendation.includes('買')) return '#4caf50';
+    if (recommendation.includes('賣')) return '#f44336';
+    return '#ff9800';
+}
+
+function getScoreColor(score) {
+    if (score >= 8) return '#4caf50';
+    if (score >= 6.5) return '#8bc34a';
+    if (score >= 5) return '#ff9800';
+    if (score >= 3.5) return '#ff5722';
+    return '#f44336';
+}
+
+function viewStockDetail(stockId) {
+    // 檢查數據是否存在
+    if (!window.allStocksForCompare) {
+        showNotification('數據已過期，請重新選擇股票比較！', 'warning');
+        return;
+    }
+
+    const stock = window.allStocksForCompare.find(s => s.id === stockId);
+    if (!stock || !stock.data) {
+        showNotification('找不到詳細數據！', 'error');
+        return;
+    }
+
+    // 設置為當前分析數據
+    analysisData = stock.data;
+    currentStock = stock.stock;
+    currentMarket = stock.market;
+
+    // 顯示結果
+    displayResults();
+
+    // 切換到分析頁面
+    switchPage('analysis');
+}
+
 // ===== 全局函數（供 HTML 調用）=====
 window.removeFromWatchlist = removeFromWatchlist;
 window.viewWatchlistItem = viewWatchlistItem;
 window.viewHistoryItem = viewHistoryItem;
 window.removeHistory = removeHistory;
+window.updateCompareSelection = updateCompareSelection;
+window.cancelCompare = cancelCompare;
+window.confirmCompare = confirmCompare;
+window.viewStockDetail = viewStockDetail;
