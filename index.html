@@ -365,42 +365,285 @@
             <div class="page" id="page-dashboard">
                 <div class="page-header">
                     <h2>📈 投資儀表板</h2>
-                    <p>觀察清單整體表現概覽</p>
+                    <p>全方位投資分析視圖</p>
                 </div>
 
-                <div class="dashboard-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon">⭐</div>
-                        <div class="stat-value" id="total-watchlist">0</div>
-                        <div class="stat-label">觀察中</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📊</div>
-                        <div class="stat-value" id="total-analyses">0</div>
-                        <div class="stat-label">總分析次數</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">💡</div>
-                        <div class="stat-value" id="buy-signals">0</div>
-                        <div class="stat-label">買入信號</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">⚠️</div>
-                        <div class="stat-value" id="sell-signals">0</div>
-                        <div class="stat-label">賣出信號</div>
-                    </div>
-                </div>
+                <!-- 核心統計卡片區 -->
+                <section class="dashboard-section">
+                    <h3 class="section-title">📊 核心統計</h3>
+                    <div class="dashboard-stats stats-grid-4x3">
+                        <!-- 第一排：原有4個卡片 -->
+                        <div class="stat-card">
+                            <div class="stat-icon">⭐</div>
+                            <div class="stat-value" id="total-watchlist">0</div>
+                            <div class="stat-label">觀察中</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-value" id="total-analyses">0</div>
+                            <div class="stat-label">總分析次數</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💡</div>
+                            <div class="stat-value" id="buy-signals">0</div>
+                            <div class="stat-label">買入信號</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⚠️</div>
+                            <div class="stat-value" id="sell-signals">0</div>
+                            <div class="stat-label">賣出信號</div>
+                        </div>
 
-                <div class="dashboard-charts">
-                    <div class="chart-container">
-                        <h3>觀察清單 AI 評分分布</h3>
-                        <canvas id="scoreDistributionChart"></canvas>
+                        <!-- 第二排：新增4個卡片 -->
+                        <div class="stat-card">
+                            <div class="stat-icon">📈</div>
+                            <div class="stat-value" id="avg-ai-score">0</div>
+                            <div class="stat-label">平均AI評分</div>
+                            <div class="stat-trend" id="avg-score-trend"></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🏆</div>
+                            <div class="stat-value" id="highest-score-value">-</div>
+                            <div class="stat-label" id="highest-score-label">最高評分股票</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📉</div>
+                            <div class="stat-value" id="lowest-score-value">-</div>
+                            <div class="stat-label" id="lowest-score-label">最低評分股票</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔵</div>
+                            <div class="stat-value" id="hold-signals">0</div>
+                            <div class="stat-label">持有信號</div>
+                        </div>
+
+                        <!-- 第三排：新增4個卡片 -->
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-value" id="analyses-7days">0</div>
+                            <div class="stat-label">最近7天分析</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📆</div>
+                            <div class="stat-value" id="analyses-30days">0</div>
+                            <div class="stat-label">最近30天分析</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔥</div>
+                            <div class="stat-value" id="most-analyzed-value">-</div>
+                            <div class="stat-label" id="most-analyzed-label">最常分析股票</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-value" id="avg-depth">0</div>
+                            <div class="stat-label">平均分析深度</div>
+                        </div>
                     </div>
-                    <div class="chart-container">
-                        <h3>投資建議分布</h3>
-                        <canvas id="recommendationChart"></canvas>
+                </section>
+
+                <!-- 時間趨勢分析區 -->
+                <section class="dashboard-section">
+                    <h3 class="section-title">⏱️ 時間趨勢分析</h3>
+                    <div class="dashboard-charts charts-2col">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h4>AI評分時間趨勢</h4>
+                                <div class="chart-legend">
+                                    <label><input type="checkbox" checked onchange="toggleChartLine('overall', this.checked)"> 總評分</label>
+                                    <label><input type="checkbox" onchange="toggleChartLine('technical', this.checked)"> 技術面</label>
+                                    <label><input type="checkbox" onchange="toggleChartLine('fundamental', this.checked)"> 基本面</label>
+                                    <label><input type="checkbox" onchange="toggleChartLine('sentiment', this.checked)"> 情緒面</label>
+                                </div>
+                            </div>
+                            <canvas id="scoreTrendChart"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <h4>分析頻率統計</h4>
+                            <canvas id="analysisFrequencyChart"></canvas>
+                        </div>
                     </div>
-                </div>
+                </section>
+
+                <!-- 市場分析區 -->
+                <section class="dashboard-section">
+                    <h3 class="section-title">🌏 市場分析</h3>
+                    <div class="dashboard-charts charts-3col">
+                        <div class="chart-container">
+                            <h4>市場分布</h4>
+                            <canvas id="marketDistributionChart"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <h4>各市場平均評分</h4>
+                            <canvas id="marketAvgScoreChart"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <h4>市場投資建議分布</h4>
+                            <canvas id="marketRecommendationChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 多維度評分分析區 -->
+                <section class="dashboard-section">
+                    <h3 class="section-title">🎯 多維度評分分析</h3>
+                    <div class="dashboard-charts charts-2col">
+                        <div class="chart-container">
+                            <h4>平均多維度雷達圖</h4>
+                            <canvas id="dimensionRadarChart"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <h4>各維度評分分布</h4>
+                            <canvas id="dimensionDistributionChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 風險分析區 -->
+                <section class="dashboard-section">
+                    <h3 class="section-title">⚠️ 風險分析</h3>
+                    <div class="dashboard-charts charts-2col">
+                        <div class="chart-container">
+                            <h4>風險等級分布</h4>
+                            <canvas id="riskDistributionChart"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <h4>風險-收益矩陣</h4>
+                            <canvas id="riskReturnScatterChart"></canvas>
+                            <div class="scatter-legend">
+                                <div class="quadrant high-risk-high-return">高風險高收益</div>
+                                <div class="quadrant low-risk-high-return">低風險高收益</div>
+                                <div class="quadrant high-risk-low-return">高風險低收益</div>
+                                <div class="quadrant low-risk-low-return">低風險低收益</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 原有圖表區（保留相容性） -->
+                <section class="dashboard-section">
+                    <h3 class="section-title">📊 評分與建議分布</h3>
+                    <div class="dashboard-charts charts-2col">
+                        <div class="chart-container">
+                            <h4>觀察清單 AI 評分分布</h4>
+                            <canvas id="scoreDistributionChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h4>投資建議分布</h4>
+                            <canvas id="recommendationChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 數據表格區 -->
+                <section class="dashboard-section">
+                    <h3 class="section-title">📋 詳細數據</h3>
+
+                    <!-- 表格標籤頁 -->
+                    <div class="table-tabs">
+                        <button class="table-tab-btn active" onclick="switchTableTab('watchlist')">觀察清單</button>
+                        <button class="table-tab-btn" onclick="switchTableTab('recent')">最近分析</button>
+                        <button class="table-tab-btn" onclick="switchTableTab('comparison')">指標對比</button>
+                    </div>
+
+                    <!-- 表格內容 -->
+                    <div class="table-tab-content">
+                        <!-- 觀察清單表格 -->
+                        <div id="table-watchlist" class="table-pane active">
+                            <div class="data-table-container">
+                                <div class="table-controls">
+                                    <input type="text" id="watchlist-search" placeholder="搜尋股票代碼..." onkeyup="filterWatchlistTable()">
+                                    <select id="watchlist-filter" onchange="filterWatchlistTable()">
+                                        <option value="all">所有市場</option>
+                                        <option value="TW">台股</option>
+                                        <option value="US">美股</option>
+                                        <option value="HK">港股</option>
+                                    </select>
+                                </div>
+
+                                <div class="table-wrapper">
+                                    <table class="sortable-table" id="watchlist-table">
+                                        <thead>
+                                            <tr>
+                                                <th onclick="sortWatchlistTable('stock')">股票代碼</th>
+                                                <th onclick="sortWatchlistTable('market')">市場</th>
+                                                <th onclick="sortWatchlistTable('aiScore')">AI評分</th>
+                                                <th onclick="sortWatchlistTable('technical')">技術面</th>
+                                                <th onclick="sortWatchlistTable('fundamental')">基本面</th>
+                                                <th onclick="sortWatchlistTable('sentiment')">情緒面</th>
+                                                <th onclick="sortWatchlistTable('recommendation')">建議</th>
+                                                <th onclick="sortWatchlistTable('addedDate')">加入日期</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="watchlist-table-body">
+                                            <!-- 動態生成 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="table-pagination">
+                                    <button onclick="prevWatchlistPage()" id="watchlist-prev">上一頁</button>
+                                    <span id="watchlist-page-info">第 1 頁</span>
+                                    <button onclick="nextWatchlistPage()" id="watchlist-next">下一頁</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 最近分析表格 -->
+                        <div id="table-recent" class="table-pane">
+                            <div class="data-table-container">
+                                <div class="table-wrapper">
+                                    <table class="sortable-table" id="recent-table">
+                                        <thead>
+                                            <tr>
+                                                <th>時間</th>
+                                                <th>股票代碼</th>
+                                                <th>市場</th>
+                                                <th>深度</th>
+                                                <th>AI評分</th>
+                                                <th>建議</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-table-body">
+                                            <!-- 動態生成 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 指標對比表格 -->
+                        <div id="table-comparison" class="table-pane">
+                            <div class="data-table-container">
+                                <div class="table-wrapper">
+                                    <table class="sortable-table" id="comparison-table">
+                                        <thead>
+                                            <tr>
+                                                <th>排名</th>
+                                                <th>股票代碼</th>
+                                                <th>市場</th>
+                                                <th>AI總評分</th>
+                                                <th>技術面</th>
+                                                <th>基本面</th>
+                                                <th>情緒面</th>
+                                                <th>投資建議</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="comparison-table-body">
+                                            <!-- 動態生成 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
 
             <!-- 設定頁面 -->

@@ -1128,29 +1128,106 @@ function removeHistory(index) {
 }
 
 // ===== 統計與儀表板 =====
+// ===== 儀表板統計更新函數 =====
+
 function updateStats() {
+    updateCoreStats();
+    updateExtendedStats();
+}
+
+function updateCoreStats() {
     elements.totalWatchlist.textContent = watchlist.length;
     elements.totalAnalyses.textContent = analysisHistory.length;
 
-    let buyCount = 0;
-    let sellCount = 0;
+    const recCounts = getRecommendationCounts();
+    elements.buySignals.textContent = recCounts.buy;
+    elements.sellSignals.textContent = recCounts.sell;
+}
 
-    analysisHistory.forEach(item => {
-        const rec = extractRecommendation(item.decision);
-        if (rec.includes('買')) buyCount++;
-        if (rec.includes('賣')) sellCount++;
-    });
+function updateExtendedStats() {
+    // 平均AI評分
+    const avgScore = calculateAvgAIScore();
+    const avgScoreEl = document.getElementById('avg-ai-score');
+    if (avgScoreEl) avgScoreEl.textContent = avgScore;
 
-    elements.buySignals.textContent = buyCount;
-    elements.sellSignals.textContent = sellCount;
+    // 最高評分股票
+    const highest = getExtremeScoreStock('highest');
+    const highestValueEl = document.getElementById('highest-score-value');
+    const highestLabelEl = document.getElementById('highest-score-label');
+    if (highestValueEl && highest) {
+        highestValueEl.textContent = highest.aiScore.toFixed(1);
+        if (highestLabelEl) highestLabelEl.textContent = `${highest.stock} (最高評分)`;
+    } else if (highestValueEl) {
+        highestValueEl.textContent = '-';
+    }
+
+    // 最低評分股票
+    const lowest = getExtremeScoreStock('lowest');
+    const lowestValueEl = document.getElementById('lowest-score-value');
+    const lowestLabelEl = document.getElementById('lowest-score-label');
+    if (lowestValueEl && lowest) {
+        lowestValueEl.textContent = lowest.aiScore.toFixed(1);
+        if (lowestLabelEl) lowestLabelEl.textContent = `${lowest.stock} (最低評分)`;
+    } else if (lowestValueEl) {
+        lowestValueEl.textContent = '-';
+    }
+
+    // 持有信號
+    const recCounts = getRecommendationCounts();
+    const holdSignalsEl = document.getElementById('hold-signals');
+    if (holdSignalsEl) holdSignalsEl.textContent = recCounts.hold;
+
+    // 最近7天分析
+    const analyses7days = getAnalysisCountInDays(7);
+    const analyses7daysEl = document.getElementById('analyses-7days');
+    if (analyses7daysEl) analyses7daysEl.textContent = analyses7days;
+
+    // 最近30天分析
+    const analyses30days = getAnalysisCountInDays(30);
+    const analyses30daysEl = document.getElementById('analyses-30days');
+    if (analyses30daysEl) analyses30daysEl.textContent = analyses30days;
+
+    // 最常分析股票
+    const mostAnalyzed = getMostAnalyzedStock();
+    const mostValueEl = document.getElementById('most-analyzed-value');
+    const mostLabelEl = document.getElementById('most-analyzed-label');
+    if (mostValueEl && mostAnalyzed) {
+        mostValueEl.textContent = mostAnalyzed.count;
+        if (mostLabelEl) mostLabelEl.textContent = `${mostAnalyzed.stock} (最常分析)`;
+    } else if (mostValueEl) {
+        mostValueEl.textContent = '-';
+    }
+
+    // 平均分析深度
+    const avgDepthEl = document.getElementById('avg-depth');
+    if (avgDepthEl && analysisHistory.length > 0) {
+        const totalDepth = analysisHistory.reduce((sum, item) => sum + (item.depth || 0), 0);
+        avgDepthEl.textContent = (totalDepth / analysisHistory.length).toFixed(1);
+    } else if (avgDepthEl) {
+        avgDepthEl.textContent = '0';
+    }
 }
 
 function renderDashboard() {
     updateStats();
 
-    // 繪製圖表
+    // 繪製原有圖表
     renderScoreDistributionChart();
     renderRecommendationChart();
+
+    // 繪製新增圖表（暫時註解，待實現）
+    // renderScoreTrendChart();
+    // renderAnalysisFrequencyChart();
+    // renderMarketDistributionChart();
+    // renderMarketAvgScoreChart();
+    // renderMarketRecommendationChart();
+    // renderDimensionRadarChart();
+    // renderDimensionDistributionChart();
+    // renderRiskDistributionChart();
+    // renderRiskReturnScatterChart();
+
+    // 渲染表格（暫時註解，待實現）
+    // renderAllTables();
 }
 
 // 儲存圖表實例
@@ -1234,6 +1311,318 @@ function renderRecommendationChart() {
             }
         }
     });
+}
+
+// ===== 儀表板輔助函數 =====
+
+/**
+ * 計算數組平均值
+ */
+function average(arr) {
+    if (!arr || arr.length === 0) return 0;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+/**
+ * 計算四分位數
+ */
+function quartile(arr, q) {
+    const sorted = arr.slice().sort((a, b) => a - b);
+    const pos = (sorted.length - 1) * q;
+    const base = Math.floor(pos);
+    const rest = pos - base;
+
+    if (sorted[base + 1] !== undefined) {
+        return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+    } else {
+        return sorted[base];
+    }
+}
+
+/**
+ * 格式化日期為 MM/DD
+ */
+function formatDateShort(dateStr) {
+    const date = new Date(dateStr);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+/**
+ * 格式化相對時間（如：2小時前、3天前）
+ */
+function formatRelativeTime(dateStr) {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins}分鐘前`;
+    if (diffHours < 24) return `${diffHours}小時前`;
+    if (diffDays < 30) return `${diffDays}天前`;
+    return formatDateShort(dateStr);
+}
+
+/**
+ * 獲取最近N天的日期列表
+ */
+function getLast30Days() {
+    const dates = [];
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        dates.push(date.toISOString().split('T')[0]);
+    }
+    return dates;
+}
+
+/**
+ * 獲取嵌套屬性值
+ */
+function getNestedValue(obj, path) {
+    return path.split('.').reduce((current, prop) => current?.[prop], obj);
+}
+
+// ===== 數據處理函數 =====
+
+/**
+ * 按時間範圍過濾分析歷史
+ */
+function filterByTimeRange(history, days) {
+    if (days === 'all') return history;
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    return history.filter(item => new Date(item.timestamp) >= cutoff);
+}
+
+/**
+ * 按日期分組評分數據
+ */
+function groupScoresByDate(history) {
+    const grouped = {};
+
+    history.forEach(item => {
+        const date = item.timestamp.split('T')[0];
+        if (!grouped[date]) {
+            grouped[date] = {
+                overall: [],
+                technical: [],
+                fundamental: [],
+                sentiment: []
+            };
+        }
+
+        if (item.aiScore && typeof item.aiScore === 'object') {
+            grouped[date].overall.push(item.aiScore.overall || 0);
+            grouped[date].technical.push(item.aiScore.technical || item.aiScore.overall || 0);
+            grouped[date].fundamental.push(item.aiScore.fundamental || item.aiScore.overall || 0);
+            grouped[date].sentiment.push(item.aiScore.sentiment || item.aiScore.overall || 0);
+        }
+    });
+
+    return Object.keys(grouped).sort().map(date => ({
+        date: formatDateShort(date),
+        overall: average(grouped[date].overall),
+        technical: average(grouped[date].technical),
+        fundamental: average(grouped[date].fundamental),
+        sentiment: average(grouped[date].sentiment)
+    }));
+}
+
+/**
+ * 按股票分組
+ */
+function groupByStock(history) {
+    return history.reduce((acc, item) => {
+        const key = `${item.market}:${item.stock}`;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+    }, {});
+}
+
+/**
+ * 按市場分組
+ */
+function groupByMarket(data) {
+    return data.reduce((acc, item) => {
+        if (!acc[item.market]) acc[item.market] = [];
+        acc[item.market].push(item);
+        return acc;
+    }, {});
+}
+
+/**
+ * 準備風險-收益散點圖數據
+ */
+function prepareRiskReturnData() {
+    return watchlist.map(item => ({
+        x: item.aiScore || 0,
+        y: extractRiskScore(item.data?.risk || ''),
+        label: item.stock
+    }));
+}
+
+/**
+ * 從risk文本中提取風險評分
+ */
+function extractRiskScore(riskText) {
+    if (!riskText) return 5;
+
+    // 策略1: 提取明確的數字評分
+    const scoreMatch = riskText.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+    if (scoreMatch) return parseFloat(scoreMatch[1]);
+
+    // 策略2: 關鍵詞映射
+    const keywords = {
+        '極高風險': 9,
+        '高風險': 7.5,
+        '中高風險': 6.5,
+        '中等風險': 5,
+        '中低風險': 4,
+        '低風險': 3,
+        '極低風險': 1.5
+    };
+
+    for (const [keyword, score] of Object.entries(keywords)) {
+        if (riskText.includes(keyword)) return score;
+    }
+
+    return 5; // 預設中等風險
+}
+
+// ===== 統計計算函數 =====
+
+/**
+ * 計算平均AI評分
+ */
+function calculateAvgAIScore() {
+    if (watchlist.length === 0) return 0;
+    const sum = watchlist.reduce((acc, item) => acc + (item.aiScore || 0), 0);
+    return (sum / watchlist.length).toFixed(1);
+}
+
+/**
+ * 獲取最高/最低評分股票
+ */
+function getExtremeScoreStock(type) {
+    if (watchlist.length === 0) return null;
+
+    return watchlist.reduce((extreme, item) => {
+        const score = item.aiScore || 0;
+        const extremeScore = extreme.aiScore || 0;
+
+        if (type === 'highest') {
+            return score > extremeScore ? item : extreme;
+        } else {
+            return score < extremeScore ? item : extreme;
+        }
+    });
+}
+
+/**
+ * 計算時間範圍內的分析次數
+ */
+function getAnalysisCountInDays(days) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    return analysisHistory.filter(item =>
+        new Date(item.timestamp) >= cutoff
+    ).length;
+}
+
+/**
+ * 獲取最常分析的股票
+ */
+function getMostAnalyzedStock() {
+    if (analysisHistory.length === 0) return null;
+
+    const stockCounts = {};
+
+    analysisHistory.forEach(item => {
+        const key = `${item.market}:${item.stock}`;
+        stockCounts[key] = (stockCounts[key] || 0) + 1;
+    });
+
+    let maxCount = 0;
+    let mostStock = null;
+
+    Object.entries(stockCounts).forEach(([stock, count]) => {
+        if (count > maxCount) {
+            maxCount = count;
+            mostStock = stock;
+        }
+    });
+
+    return mostStock ? { stock: mostStock.split(':')[1], count: maxCount } : null;
+}
+
+/**
+ * 統計各建議類型的數量
+ */
+function getRecommendationCounts() {
+    const counts = { buy: 0, hold: 0, sell: 0 };
+
+    analysisHistory.forEach(item => {
+        const rec = extractRecommendation(item.decision);
+        if (rec.includes('買')) counts.buy++;
+        else if (rec.includes('賣')) counts.sell++;
+        else counts.hold++;
+    });
+
+    return counts;
+}
+
+/**
+ * 計算各市場平均評分
+ */
+function calculateMarketAvgScores() {
+    const marketData = { TW: [], US: [], HK: [] };
+
+    watchlist.forEach(item => {
+        if (marketData[item.market]) {
+            marketData[item.market].push(item.aiScore || 0);
+        }
+    });
+
+    return {
+        TW: average(marketData.TW),
+        US: average(marketData.US),
+        HK: average(marketData.HK)
+    };
+}
+
+/**
+ * 計算平均多維度評分
+ */
+function calculateAvgDimensions() {
+    if (watchlist.length === 0) return { technical: 0, fundamental: 0, sentiment: 0 };
+
+    const sums = { technical: 0, fundamental: 0, sentiment: 0 };
+
+    watchlist.forEach(item => {
+        if (item.data && item.data.aiScore) {
+            sums.technical += item.data.aiScore.technical || item.aiScore || 0;
+            sums.fundamental += item.data.aiScore.fundamental || item.aiScore || 0;
+            sums.sentiment += item.data.aiScore.sentiment || item.aiScore || 0;
+        } else {
+            // 如果沒有詳細評分，使用總評分
+            const score = item.aiScore || 0;
+            sums.technical += score;
+            sums.fundamental += score;
+            sums.sentiment += score;
+        }
+    });
+
+    return {
+        technical: sums.technical / watchlist.length,
+        fundamental: sums.fundamental / watchlist.length,
+        sentiment: sums.sentiment / watchlist.length
+    };
 }
 
 // ===== 匯出 PDF =====
