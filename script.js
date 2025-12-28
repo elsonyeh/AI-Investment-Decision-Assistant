@@ -2314,16 +2314,17 @@ function checkStockExistsInMarket(code, market) {
 // 驗證股票代碼是否存在（支援代碼和名稱搜尋）
 function validateStockExists(input, market) {
     const cleanInput = input.trim().toUpperCase();
+    const inputLower = input.toLowerCase();
 
     // 如果市場是 AUTO，需要同時檢查所有市場
     const marketsToCheck = market === 'AUTO' ? ['TW', 'US'] : [market];
 
+    // 先嘗試代碼匹配（優先級最高）
     for (const mkt of marketsToCheck) {
         const stocks = (fullStockDatabase[mkt] && fullStockDatabase[mkt].length > 0)
             ? fullStockDatabase[mkt]
             : STOCK_DATABASE[mkt] || [];
 
-        // 檢查代碼匹配
         const codeMatch = stocks.find(stock => stock.code === cleanInput || stock.code === cleanInput.split('.')[0]);
 
         if (codeMatch) {
@@ -2334,27 +2335,66 @@ function validateStockExists(input, market) {
                 matchType: 'code'
             };
         }
+    }
 
-        // 檢查名稱匹配
-        const nameMatch = stocks.find(stock => {
+    // 如果沒有代碼匹配，再檢查名稱匹配
+    // 收集所有市場的名稱匹配結果
+    const allNameMatches = [];
+
+    for (const mkt of marketsToCheck) {
+        const stocks = (fullStockDatabase[mkt] && fullStockDatabase[mkt].length > 0)
+            ? fullStockDatabase[mkt]
+            : STOCK_DATABASE[mkt] || [];
+
+        stocks.forEach(stock => {
             const nameLower = stock.name.toLowerCase();
             const nameEnLower = stock.nameEn ? stock.nameEn.toLowerCase() : '';
             const nameCnLower = stock.nameCn ? stock.nameCn.toLowerCase() : '';
-            const inputLower = input.toLowerCase();
 
-            return nameLower === inputLower ||
-                   nameEnLower === inputLower ||
-                   nameCnLower === inputLower;
+            // 完全匹配
+            if (nameLower === inputLower || nameEnLower === inputLower || nameCnLower === inputLower) {
+                allNameMatches.push({
+                    market: mkt,
+                    stock: stock,
+                    matchQuality: 'exact', // 完全匹配
+                    matchField: nameLower === inputLower ? 'name' :
+                               nameEnLower === inputLower ? 'nameEn' : 'nameCn'
+                });
+            }
         });
+    }
 
-        if (nameMatch) {
+    // 如果有名稱匹配，選擇最佳匹配
+    if (allNameMatches.length > 0) {
+        // 優先選擇匹配中文名稱的美股（nameCn），因為中文通常指美股公司的中文譯名
+        const cnMatch = allNameMatches.find(m => m.matchField === 'nameCn');
+        if (cnMatch) {
             return {
                 exists: true,
-                market: mkt,
-                stock: nameMatch,
+                market: cnMatch.market,
+                stock: cnMatch.stock,
                 matchType: 'name'
             };
         }
+
+        // 其次選擇匹配英文名稱的
+        const enMatch = allNameMatches.find(m => m.matchField === 'nameEn');
+        if (enMatch) {
+            return {
+                exists: true,
+                market: enMatch.market,
+                stock: enMatch.stock,
+                matchType: 'name'
+            };
+        }
+
+        // 最後返回第一個匹配
+        return {
+            exists: true,
+            market: allNameMatches[0].market,
+            stock: allNameMatches[0].stock,
+            matchType: 'name'
+        };
     }
 
     return {
