@@ -343,7 +343,7 @@ function updateAgentCount() {
 
 // ===== 開始分析 =====
 async function startAnalysis() {
-    const market = elements.marketSelect.value;
+    let market = elements.marketSelect.value;
     const stock = elements.stockInput.value.trim().toUpperCase();
     const date = elements.analysisDate.value;
     const depth = elements.depthSlider.value;
@@ -359,21 +359,35 @@ async function startAnalysis() {
         return;
     }
 
-    // 驗證市場與代碼是否匹配
-    const validation = validateMarketMatch(market, stock);
+    // 自動識別模式：根據代碼格式自動判斷市場
+    if (market === 'AUTO') {
+        const detectedMarket = detectMarketFromCode(stock);
 
-    if (!validation.valid) {
-        // 顯示確認對話框
-        showMarketMismatchDialog(validation, stock, (confirmedMarket) => {
-            // 使用確認後的市場進行分析
-            proceedWithAnalysis(confirmedMarket, stock, date, depth, selectedAgents);
-        });
-        return;
-    }
+        if (detectedMarket) {
+            market = detectedMarket;
+            elements.marketSelect.value = detectedMarket;
+            showNotification(`已自動識別為${getMarketName(detectedMarket)}`, 'success', 2000);
+        } else {
+            showNotification('無法識別代碼格式，請手動選擇市場', 'warning');
+            return;
+        }
+    } else {
+        // 手動選擇模式：驗證市場與代碼是否匹配
+        const validation = validateMarketMatch(market, stock);
 
-    // 如果有警告但仍然有效
-    if (validation.warning) {
-        showNotification(validation.warning, 'info', 3000);
+        if (!validation.valid) {
+            // 顯示確認對話框
+            showMarketMismatchDialog(validation, stock, (confirmedMarket) => {
+                // 使用確認後的市場進行分析
+                proceedWithAnalysis(confirmedMarket, stock, date, depth, selectedAgents);
+            });
+            return;
+        }
+
+        // 如果有警告但仍然有效
+        if (validation.warning) {
+            showNotification(validation.warning, 'info', 3000);
+        }
     }
 
     // 直接進行分析
@@ -2072,6 +2086,25 @@ function initStockAutocomplete() {
 }
 
 function searchStocks(query, market) {
+    // 自動識別模式：同時搜尋台股和美股
+    if (market === 'AUTO') {
+        const twResults = searchStocksInMarket(query, 'TW');
+        const usResults = searchStocksInMarket(query, 'US');
+
+        // 合併結果並標記市場
+        const combined = [
+            ...twResults.map(s => ({ ...s, market: 'TW' })),
+            ...usResults.map(s => ({ ...s, market: 'US' }))
+        ];
+
+        return combined.slice(0, 10); // 最多顯示10個
+    }
+
+    // 手動選擇模式：只搜尋指定市場
+    return searchStocksInMarket(query, market);
+}
+
+function searchStocksInMarket(query, market) {
     // 優先使用完整資料庫，如果沒有則使用內建資料庫
     const stocks = (fullStockDatabase[market] && fullStockDatabase[market].length > 0)
         ? fullStockDatabase[market]
@@ -2084,7 +2117,7 @@ function searchStocks(query, market) {
         const nameCnMatch = stock.nameCn && stock.nameCn.includes(query);
 
         return codeMatch || nameMatch || nameEnMatch || nameCnMatch;
-    }).slice(0, 10); // 最多顯示10個
+    }).slice(0, 5); // 每個市場最多5個
 }
 
 function displaySuggestions(suggestions, suggestionBox, stockInput) {
@@ -2093,23 +2126,43 @@ function displaySuggestions(suggestions, suggestionBox, stockInput) {
         return;
     }
 
-    const market = elements.marketSelect.value;
+    const selectedMarket = elements.marketSelect.value;
 
     suggestionBox.innerHTML = suggestions.map(stock => {
-        const displayName = market === 'TW'
-            ? `${stock.name} (${stock.nameEn})`
+        // 判斷股票來自哪個市場（自動識別模式下會有 market 屬性）
+        const stockMarket = stock.market || selectedMarket;
+
+        // 根據市場決定顯示名稱
+        const displayName = stockMarket === 'TW'
+            ? `${stock.name} (${stock.nameEn || ''})`
             : `${stock.name}${stock.nameCn ? ' (' + stock.nameCn + ')' : ''}`;
 
+        // 市場標籤（只在自動識別模式下顯示）
+        const marketBadge = selectedMarket === 'AUTO'
+            ? `<span style="
+                display: inline-block;
+                padding: 2px 8px;
+                background: ${stockMarket === 'TW' ? '#4caf50' : '#2196f3'};
+                color: white;
+                border-radius: 12px;
+                font-size: 10px;
+                margin-left: 8px;
+            ">${stockMarket === 'TW' ? '🇹🇼 台股' : '🇺🇸 美股'}</span>`
+            : '';
+
         return `
-            <div class="suggestion-item" data-code="${stock.code}" style="
+            <div class="suggestion-item" data-code="${stock.code}" data-market="${stockMarket}" style="
                 padding: 12px 16px;
                 cursor: pointer;
                 border-bottom: 1px solid #f0f0f0;
                 transition: background 0.2s;
             " onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-weight: bold; color: #1976d2; font-size: 14px;">${stock.code}</div>
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center;">
+                            <span style="font-weight: bold; color: #1976d2; font-size: 14px;">${stock.code}</span>
+                            ${marketBadge}
+                        </div>
                         <div style="font-size: 12px; color: #666; margin-top: 2px;">${displayName}</div>
                     </div>
                     <div style="color: #1976d2; font-size: 20px;">→</div>
@@ -2124,6 +2177,14 @@ function displaySuggestions(suggestions, suggestionBox, stockInput) {
     suggestionBox.querySelectorAll('.suggestion-item').forEach(item => {
         item.addEventListener('click', () => {
             stockInput.value = item.dataset.code;
+
+            // 如果是自動識別模式，自動切換到對應的市場
+            if (selectedMarket === 'AUTO') {
+                const detectedMarket = item.dataset.market;
+                elements.marketSelect.value = detectedMarket;
+                showNotification(`已自動切換為${getMarketName(detectedMarket)}`, 'success', 2000);
+            }
+
             suggestionBox.style.display = 'none';
             stockInput.focus();
         });
